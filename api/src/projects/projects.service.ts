@@ -1,37 +1,42 @@
 import { Injectable } from '@nestjs/common';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Project } from './entities/project.entity';
+import { PrismaService } from '../prisma.service';
+
 
 @Injectable()
 export class ProjectsService {
-    constructor(
-    @InjectRepository(Project)
-    private projectsRepository: Repository<Project>,
-  ) {}
+  // Injetamos o PrismaService em vez do Repository
+  constructor(private prisma: PrismaService) {}
 
-  // Criar no banco
-  create(createProjectDto: CreateProjectDto) {
-    const newProject = this.projectsRepository.create(createProjectDto);
-    return this.projectsRepository.save(newProject);
+  // Criar no banco PostgreSQL
+  async create(createProjectDto: CreateProjectDto) {
+    return this.prisma.project.create({
+        data: createProjectDto as any, // O 'as any' remove a trava do TypeScript temporariamente
+    });
+    }
+
+  // Buscar todos do banco PostgreSQL
+  async findAll() {
+    return this.prisma.project.findMany();
   }
 
-  // Buscar todos do banco
-  findAll() {
-    return this.projectsRepository.find();
+  async findOne(id: number) {
+    return this.prisma.project.findUnique({
+      where: { id },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} project`;
+  async update(id: number, updateProjectDto: UpdateProjectDto) {
+    return this.prisma.project.update({
+      where: { id },
+      data: updateProjectDto,
+    });
   }
 
-  update(id: number, updateProjectDto: UpdateProjectDto) {
-    return `This action updates a #${id} project`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} project`;
+  async remove(id: number) {
+    return this.prisma.project.delete({
+      where: { id },
+    });
   }
 }

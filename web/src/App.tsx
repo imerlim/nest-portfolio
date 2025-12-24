@@ -1,58 +1,31 @@
-import { useEffect, useState } from 'react'
-import axios from 'axios'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './auth/Login';
 
-// Definimos o formato do projeto para o TypeScript não reclamar
-interface Project {
-  id: number;
-  title: string;
-  description: string;
-}
+// Componente simples de Dashboard para teste
+const Dashboard = () => (
+  <div style={{ padding: '20px' }}>
+    <h1>Painel do Portfólio</h1>
+    <p>Você está logado!</p>
+    <button onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }}>
+      Sair
+    </button>
+  </div>
+);
 
 function App() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-
-  // Função para buscar projetos
-  const fetchProjects = () => {
-    axios.get('http://localhost:3000/projects').then(res => setProjects(res.data));
-  };
-
-  useEffect(() => { fetchProjects(); }, []);
-
-  // Função para salvar novo projeto
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await axios.post('http://localhost:3000/projects', { title, description });
-    setTitle('');
-    setDescription('');
-    fetchProjects(); // Recarrega a lista
-  };
-
   return (
-    <div style={{ padding: '40px', maxWidth: '600px', margin: 'auto' }}>
-      <h1>Gerenciar Portfólio</h1>
-      
-      {/* Formulário de Cadastro */}
-      <form onSubmit={handleSubmit} style={{ marginBottom: '40px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <input placeholder="Título" value={title} onChange={e => setTitle(e.target.value)} />
-        <textarea placeholder="Descrição" value={description} onChange={e => setDescription(e.target.value)} />
-        <button type="submit">Adicionar Projeto</button>
-      </form>
+    <BrowserRouter>
+      <Routes>
+        {/* Aqui você define o nome da rota e qual componente ela abre */}
+        <Route path="/login" element={<Login onLoginSuccess={() => window.location.href = '/dashboard'} />} />
+        
+        <Route path="/dashboard" element={<Dashboard />} />
 
-      <hr />
-
-      {/* Listagem */}
-      <div>
-        {projects.map(p => (
-          <div key={p.id} style={{ borderBottom: '1px solid #eee', padding: '10px 0' }}>
-            <h3>{p.title}</h3>
-            <p>{p.description}</p>
-          </div>
-        ))}
-      </div>
-    </div>
+        {/* Redireciona a raiz "/" para o login por padrão */}
+        <Route path="/" element={<Navigate to="/login" />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
-export default App
+export default App;
