@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './auth/Login';
+import Register from './auth/Register';
 
 // Componente simples de Dashboard para teste
 const Dashboard = () => (
@@ -18,6 +19,8 @@ function App() {
       <Routes>
         {/* Aqui você define o nome da rota e qual componente ela abre */}
         <Route path="/login" element={<Login onLoginSuccess={() => window.location.href = '/dashboard'} />} />
+
+        <Route path="/register" element={<Register />} />
         
         <Route path="/dashboard" element={<Dashboard />} />
 
