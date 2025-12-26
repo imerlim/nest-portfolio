@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api.ts'
 
 
 export default function Login() {
@@ -13,11 +13,11 @@ export default function Login() {
     e.preventDefault(); // Impede o refresh da página (comum em SPAs)
     setLoading(true);
 
+
     try {
-      const response = await axios.post('http://localhost:3000/auth/register', {
+      const response = await api.post('/auth/register', {
         email,
-        password,
-        confirmPassword
+        password
       });
       console.log(response)
       
@@ -64,7 +64,7 @@ export default function Login() {
             disabled={loading} 
             style={loading ? styles.buttonDisabled : styles.button}
           >
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading ? 'Registrando...' : 'Registrar'}
           </button>
         </form>
       </div>

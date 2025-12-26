@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api.ts'
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -18,7 +18,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     try {
       // O equivalente ao router.post('/login') do Inertia
       // Mas aqui apontamos para a URL absoluta do seu NestJS
-      const response = await axios.post('http://localhost:3000/auth/login', {
+      const response = await api.post('/auth/login', {
         email,
         password,
       });

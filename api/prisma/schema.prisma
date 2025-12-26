@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
     provider = "postgresql"
-    // url      = env("DATABASE_URL")
+    url      = env("DATABASE_URL")
 }
 
 model Project {
@@ -15,8 +15,18 @@ model Project {
 }
 
 model User {
-    id       Int     @id @default(autoincrement())
-    email    String  @unique
+    id       Int       @id @default(autoincrement())
+    email    String    @unique
     password String
     name     String?
+    expenses expense[]
+}
+
+model expense {
+    id          Int      @id @default(autoincrement())
+    userId      Int
+    user        User     @relation(fields: [userId], references: [id])
+    description String
+    date        DateTime
+    value       Float
 }
