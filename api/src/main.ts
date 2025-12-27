@@ -9,7 +9,7 @@ async function bootstrap() {
 
   // O processo escutará na porta 3000
   await app.listen(3000);
-  
+
   console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();

@@ -5,7 +5,10 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService,private jwtService: JwtService,) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
   async login(loginDto: any) {
     const { email, password } = loginDto;
@@ -28,11 +31,11 @@ export class AuthService {
       access_token: await this.jwtService.signAsync(payload),
     };
   }
-  
+
   async register(data: any) {
     // Criptografa a senha antes de salvar
     const hashedPassword = await bcrypt.hash(data.password, 10);
-    
+
     return this.prisma.user.create({
       data: {
         ...data,
