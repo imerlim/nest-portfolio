@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import CustomInput from './CustomInput';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Trash2, Pencil, Search } from 'lucide-react';
 
 // Define the Types for our Props
@@ -130,24 +131,30 @@ const Table: React.FC<TableProps> = ({
                     {showSearch && (
                         <div className="md:col-span-3">
                             <div className="relative">
-                                <Search className="absolute left-3 top-3 size-4 text-slate-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search..."
-                                    className="w-full pl-10 pr-4 py-2 rounded-md border border-slate-300 dark:border-slate-600 dark:bg-slate-800"
+                                <CustomInput
                                     value={searchQuery}
-                                    onChange={e => {
-                                        setSearchQuery(e.target.value);
+                                    onChange={val => {
+                                        setSearchQuery(val.toString());
                                         setCurrentPage(1);
                                     }}
+                                    placeholder="Search..."
+                                    textSize="text-sm"
+                                    // This shows the 'X' button only when there is text
+                                    showClear={searchQuery.length > 0}
+                                    onClear={() => {
+                                        setSearchQuery('');
+                                        setCurrentPage(1);
+                                    }}
+                                    // This puts the magnifying glass inside the input
+                                    prepend={<Search size={18} className="text-slate-400" />}
                                 />
                             </div>
                         </div>
                     )}
                     <div className="md:col-span-1 md:col-start-6">
-                        <label className="block text-xs text-slate-400 mb-1">Items per page:</label>
+                        <label className="block text-xs text-slate-900 dark:text-white mb-1">Items per page:</label>
                         <select
-                            className="w-full p-2 rounded-md border border-slate-300 dark:border-slate-600 dark:bg-slate-800"
+                            className="w-full p-2 rounded-md border border-slate-300 text-slate-900 dark:text-white dark:border-slate-600 dark:bg-slate-800"
                             value={localItemsPerPage}
                             onChange={e => {
                                 setLocalItemsPerPage(Number(e.target.value));
@@ -181,7 +188,7 @@ const Table: React.FC<TableProps> = ({
                                     </div>
                                 </th>
                             ))}
-                            {showActions && <th className="px-4 py-3 text-right">Actions</th>}
+                            {showActions && <th className="px-4 py-3 text-right text-slate-900 dark:text-white"></th>}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
