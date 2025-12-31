@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api.ts';
 import Table from '../components/Table';
+import CustomInput from '../components/CustomInput.tsx';
 
 export interface Expense {
     id?: number;
@@ -49,17 +50,18 @@ export default function Expenses() {
     }, []);
 
     // 3. Handle changes in the "Grid"
-    const handleCellChange = (index: number, field: keyof Expense, value: string | number) => {
-        const updated = [...expenses];
-        updated[index] = { ...updated[index], [field]: value };
-        setExpenses(updated);
+    const handleCellChange = (index: number, field: string, value: any) => {
+        // Use 'expenses' instead of 'items' to match your actual state variable!
+        const newData = [...expenses];
+        newData[index] = { ...newData[index], [field]: value };
+        setExpenses(newData);
     };
 
     // 4. Save logic (Triggers when user clicks outside the input)
     const handleSave = async (index: number) => {
         const item = expenses[index];
+        return console.log('ola', item);
         if (!item.description && !item.amount) return; // Don't save empty rows
-
         try {
             if (item.id) {
                 await api.put(`/expenses/${item.id}`, item);
@@ -79,12 +81,12 @@ export default function Expenses() {
             label: 'Description',
             key: 'description',
             render: (item: Expense, index: number) => (
-                <input
-                    className="w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded p-1 text-slate-900"
+                <CustomInput
                     value={item.description}
-                    placeholder="Type description..."
-                    onChange={e => handleCellChange(index, 'description', e.target.value)}
+                    onChange={val => handleCellChange(index, 'description', val.toString())}
                     onBlur={() => handleSave(index)}
+                    textSize="text-sm"
+                    placeholder="Description..."
                 />
             ),
         },
@@ -92,13 +94,12 @@ export default function Expenses() {
             label: 'Value',
             key: 'amount',
             render: (item: Expense, index: number) => (
-                <input
-                    type="number"
-                    className="w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded p-1 text-slate-900"
-                    value={item.amount === 0 ? '' : item.amount}
-                    placeholder="0.00"
-                    onChange={e => handleCellChange(index, 'amount', Number(e.target.value))}
+                <CustomInput
+                    value={item.amount} // Ensure 'item' is defined in your render function
+                    onChange={val => handleCellChange(index, 'amount', val)}
                     onBlur={() => handleSave(index)}
+                    formatCurrency={true}
+                    prepend="R$"
                 />
             ),
         },

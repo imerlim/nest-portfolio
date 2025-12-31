@@ -4,6 +4,7 @@ import { Trash2, X, Search, Plus } from 'lucide-react';
 interface CustomInputProps {
     value: string | number;
     onChange: (value: string | number) => void;
+    onBlur?: () => void;
     label?: string;
     id?: string;
     name?: string;
@@ -14,20 +15,14 @@ interface CustomInputProps {
     maxlength?: number;
     prepend?: ReactNode;
     append?: ReactNode;
-
-    // Action Buttons
     showSearch?: boolean;
     showClear?: boolean;
     showTrash?: boolean;
     showAdd?: boolean;
-
-    // Callbacks
     onSearch?: () => void;
     onClear?: () => void;
     onTrash?: () => void;
     onAdd?: () => void;
-
-    // Validation & Styling
     error?: boolean;
     errorMessage?: string;
     largeAppend?: boolean;
@@ -64,54 +59,63 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
         textSize = 'text-base',
         formatCurrency,
         autofocus,
+        onBlur,
     } = props;
 
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Expose the focus method to parents (Equivalent to defineExpose in Vue)
+    // --- CURRENCY LOGIC ---
+
+    const formatarMoeda = (valor: string | number) => {
+        // Safety: ensure we never process null/undefined
+        if (valor === null || valor === undefined) return '0,00';
+
+        let numericValue: number;
+        if (typeof valor === 'number') {
+            // Convert decimal (5.5) to cents (550) for integer math
+            numericValue = Math.round(valor * 100);
+        } else {
+            // String cleaning: "R$ 1.234,56" -> "123456"
+            const cleanString = valor.replace(/\D/g, '');
+            numericValue = parseInt(cleanString, 10);
+        }
+
+        if (isNaN(numericValue) || numericValue === 0) return '0,00';
+
+        return new Intl.NumberFormat('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(numericValue / 100);
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (formatCurrency) {
+            const onlyNumbers = e.target.value.replace(/\D/g, '');
+            // Convert typing to decimal (e.g. "150" -> 1.5)
+            const numericValue = onlyNumbers ? parseInt(onlyNumbers, 10) / 100 : 0;
+            onChange(numericValue);
+        } else {
+            onChange(e.target.value);
+        }
+    };
+
+    const handleBlur = () => {
+        if (onBlur) onBlur();
+    };
+
+    // Use empty string fallback to prevent "Controlled to Uncontrolled" error
+    const displayValue = formatCurrency ? formatarMoeda(value) : value ?? '';
+
+    // --- COMPONENT LOGIC ---
+
     useImperativeHandle(ref, () => ({
         focus: () => {
             inputRef.current?.focus();
         },
     }));
 
-    // Logic to handle currency formatting (Equivalent to updateValue in Vue)
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let rawValue = e.target.value;
-
-        if (formatCurrency) {
-            // 1. Replace comma with dot (handle BR decimals)
-            rawValue = rawValue.replace(',', '.');
-
-            // 2. Remove multiple dots (thousands separators)
-            const parts = rawValue.split('.');
-            if (parts.length > 2) {
-                const decimal = parts.pop();
-                rawValue = parts.join('') + '.' + decimal;
-            }
-
-            const numericValue = parseFloat(rawValue) || 0;
-            onChange(numericValue);
-        } else {
-            onChange(rawValue);
-        }
-    };
-
-    // Helper for displaying currency
-    const displayValue = (val: any) => {
-        if (formatCurrency) {
-            if (val === null || val === undefined || isNaN(val)) return '';
-            return Number(val).toLocaleString('pt-BR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-            });
-        }
-        return val;
-    };
-
     const hasButtons = showSearch || showClear || showTrash || showAdd;
 
-    // Dynamic Size Classes
     const buttonPadding = {
         'text-xs': 'p-1.5',
         'text-sm': 'p-2',
@@ -134,16 +138,15 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
                 <div className="flex-grow min-w-0">
                     <div
                         className={`
-            flex items-center w-full overflow-hidden rounded-lg bg-slate-50 dark:bg-slate-700 border transition-all
-            ${largeAppend ? 'px-0' : 'px-2'}
-            ${
-                error
-                    ? 'border-red-500 ring-1 ring-red-500'
-                    : 'border-slate-300 dark:border-slate-600 focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500'
-            }
-          `}
+                            flex items-center w-full overflow-hidden rounded-lg bg-slate-50 dark:bg-slate-700 border transition-all
+                            ${largeAppend ? 'px-0' : 'px-2'}
+                            ${
+                                error
+                                    ? 'border-red-500 ring-1 ring-red-500'
+                                    : 'border-slate-300 dark:border-slate-600 focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500'
+                            }
+                        `}
                     >
-                        {/* Prepend Slot */}
                         {prepend && (
                             <div className={`flex items-center gap-1 select-none text-slate-500 dark:text-slate-400 ${textSize}`}>
                                 {prepend}
@@ -160,22 +163,25 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
                             disabled={disabled}
                             required={required}
                             maxLength={maxlength}
-                            value={displayValue(value)}
+                            // CRITICAL FIX: The "?? ''" ensures the input is always controlled
+                            value={displayValue ?? ''}
                             onChange={handleChange}
+                            onBlur={handleBlur}
+                            // Helpful: auto-select text when clicking into the field
+                            onFocus={e => e.target.select()}
                             className={`
-                w-full p-2 text-slate-900 bg-transparent dark:text-white placeholder-slate-400 
-                focus:outline-none border-none ${textSize}
-                ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-              `}
+                                w-full p-2 text-slate-900 bg-transparent dark:text-white placeholder-slate-400 
+                                focus:outline-none border-none ${textSize}
+                                ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                            `}
                         />
 
-                        {/* Append Slot */}
                         {append && (
                             <div
                                 className={`
-                flex items-center justify-end gap-1 text-slate-500 dark:text-slate-400
-                ${textSize} ${largeAppend ? 'w-60' : 'w-auto px-2'}
-              `}
+                                    flex items-center justify-end gap-1 text-slate-500 dark:text-slate-400
+                                    ${textSize} ${largeAppend ? 'w-60' : 'w-auto px-2'}
+                                `}
                             >
                                 {append}
                             </div>
@@ -183,7 +189,6 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
                     </div>
                 </div>
 
-                {/* Action Buttons */}
                 {hasButtons && (
                     <div className="flex-shrink-0 flex items-center gap-2">
                         {showTrash && (

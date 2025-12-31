@@ -8,6 +8,7 @@ interface TableHeader {
     key: string;
     keys?: string[];
     customRender?: string;
+    render?: (item: any, index: number) => React.ReactNode;
 }
 
 interface TableProps {
@@ -32,10 +33,7 @@ const Table: React.FC<TableProps> = ({
     showActions = false,
     loading = false,
     clickableRows = false,
-    actionType = 'edit',
     onAction,
-    onRowClick,
-    renderCustomSlot,
 }) => {
     // 1. State (Replaces Vue's data)
     const [searchQuery, setSearchQuery] = useState('');
@@ -191,36 +189,28 @@ const Table: React.FC<TableProps> = ({
                             {showActions && <th className="px-4 py-3 text-right text-slate-900 dark:text-white"></th>}
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
-                        {paginatedItems.map((item, idx) => (
-                            <tr key={idx} className={getRowClass(item)} onClick={() => onRowClick?.(item)}>
-                                {headers.map((column, colIdx) => (
-                                    <td key={colIdx} className="px-4 py-4 text-sm text-slate-600 dark:text-slate-300">
-                                        {column.customRender && renderCustomSlot
-                                            ? renderCustomSlot(column.customRender, item)
-                                            : column.keys
-                                            ? column.keys.map((subKey, sIdx) => (
-                                                  <div key={sIdx} className={sIdx === 0 ? 'font-semibold' : 'text-xs text-slate-400'}>
-                                                      {item[subKey]}
-                                                  </div>
-                                              ))
-                                            : item[column.key]}
+                    <tbody className="divide-y divide-slate-800">
+                        {items.map((item, rowIndex) => (
+                            <tr key={item.id || rowIndex} className="hover:bg-slate-800/50 transition-colors">
+                                {headers.map(header => (
+                                    <td key={header.key} className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                                        {/* 1. Check if we provided a special 'render' function for this column */}
+                                        {header.render
+                                            ? // 2. If yes, run that function (which returns your CustomInput)
+                                              header.render(item, rowIndex)
+                                            : // 3. If no, just show the text inside the data
+                                              (item[header.key as keyof typeof item] as React.ReactNode)}
                                     </td>
                                 ))}
+
+                                {/* 4. Actions Column (Trash icon) */}
                                 {showActions && (
-                                    <td className="px-4 py-4 text-right">
+                                    <td className="px-6 py-4 text-right">
                                         <button
-                                            onClick={e => {
-                                                e.stopPropagation();
-                                                onAction?.(item);
-                                            }}
-                                            className={
-                                                actionType === 'delete'
-                                                    ? 'text-red-500 hover:text-red-700'
-                                                    : 'text-sky-500 hover:text-sky-700'
-                                            }
+                                            onClick={() => onAction?.(item)}
+                                            className="text-red-400 hover:text-red-300 transition-colors"
                                         >
-                                            {actionType === 'delete' ? <Trash2 className="size-5" /> : <Pencil className="size-5" />}
+                                            <Trash2 size={18} />
                                         </button>
                                     </td>
                                 )}
