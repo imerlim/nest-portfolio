@@ -28,5 +28,5 @@ model expense {
     user        User     @relation(fields: [userId], references: [id])
     description String
     date        DateTime
-    value       Float
+    amount       Float
 }

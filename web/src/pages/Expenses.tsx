@@ -64,25 +64,39 @@ export default function Expenses() {
 
     // 4. Save logic (Triggers when user clicks outside the input)
     const handleSave = async (index: number) => {
-        const currentValue = expenses[index].amount;
-        if (currentValue === originalValue.current) {
-            console.log('Nothing changed. Axios call canceled.');
-            return;
-        }
         const item = expenses[index];
-        return console.log('ola2', item);
-        if (!item.description && !item.amount) return; // Don't save empty rows
+        const currentValue = item.amount;
+
+        // 1. Guard Clause (Dirty Check)
+        if (currentValue === originalValue.current) return;
+
+        // 2. Avoid saving completely empty rows
+        if (!item.description && !item.amount) return;
+
         try {
             if (item.id) {
+                // SCENARIO A: Item already has an ID (Update)
                 await api.put(`/expenses/${item.id}`, item);
+                console.log('Updated existing record');
             } else {
-                const response = await api.post('/expenses', item);
-                const updated = [...expenses];
-                updated[index] = response.data;
-                setExpenses(updated);
+                // SCENARIO B: Item is new (Create)
+                const response = await api.post('/create-expenses', item);
+
+                // 3. THE FIX: Sync the ID from the Database
+                const savedItemFromServer = response.data; // This contains the new ID
+
+                const updatedExpenses = [...expenses];
+                updatedExpenses[index] = savedItemFromServer; // Replace local empty row with DB row
+
+                setExpenses(updatedExpenses);
+                console.log('Created new record and synced ID');
             }
+
+            // 4. Update the "Original Value" ref so the guard works for the next edit
+            originalValue.current = currentValue;
         } catch (error) {
             console.error('Save error:', error);
+            // Optional: Reset the UI value or show a toast notification error
         }
     };
 
@@ -124,7 +138,7 @@ export default function Expenses() {
 
     return (
         <div className="min-h-screen bg-slate-900">
-            <nav className="flex justify-between items-center px-10 py-4 bg-slate-950 text-white shadow-lg">
+            <nav className="sticky top-0 z-50 flex justify-between items-center px-10 py-4 bg-slate-950 text-white shadow-lg">
                 <h1 className="text-xl font-bold tracking-tight">Nest Portfolio</h1>
                 <div className="flex items-center gap-6">
                     {/* Total Display */}

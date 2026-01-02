@@ -5,6 +5,7 @@ interface CustomInputProps {
     value: string | number;
     onChange: (value: string | number) => void;
     onBlur?: () => void;
+    onFocus?: () => void; // 👈 1. ADICIONE ISSO NA INTERFACE
     label?: string;
     id?: string;
     name?: string;
@@ -60,6 +61,7 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
         formatCurrency,
         autofocus,
         onBlur,
+        onFocus,
     } = props;
 
     const inputRef = useRef<HTMLInputElement>(null);
@@ -168,7 +170,7 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
                             onChange={handleChange}
                             onBlur={handleBlur}
                             // Helpful: auto-select text when clicking into the field
-                            onFocus={e => e.target.select()}
+                            onFocus={onFocus}
                             className={`
                                 w-full p-2 text-slate-900 bg-transparent dark:text-white placeholder-slate-400 
                                 focus:outline-none border-none ${textSize}

@@ -190,7 +190,7 @@ const Table: React.FC<TableProps> = ({
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
-                        {items.map((item, rowIndex) => (
+                        {paginatedItems.map((item, rowIndex) => (
                             <tr key={item.id || rowIndex} className="hover:bg-slate-800/50 transition-colors">
                                 {headers.map(header => (
                                     <td key={header.key} className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
