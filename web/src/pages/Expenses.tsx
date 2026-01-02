@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import api from '../services/api.ts';
 import Table from '../components/Table';
 import CustomInput from '../components/CustomInput.tsx';
@@ -14,6 +14,11 @@ export interface Expense {
 export default function Expenses() {
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [loading, setLoading] = useState(true);
+    const originalValue = useRef<number | string>(0);
+
+    const handleFocus = (val: number | string) => {
+        originalValue.current = val;
+    };
 
     // 1. Calculate Total Balance automatically
     const totalBalance = useMemo(() => {
@@ -59,8 +64,13 @@ export default function Expenses() {
 
     // 4. Save logic (Triggers when user clicks outside the input)
     const handleSave = async (index: number) => {
+        const currentValue = expenses[index].amount;
+        if (currentValue === originalValue.current) {
+            console.log('Nothing changed. Axios call canceled.');
+            return;
+        }
         const item = expenses[index];
-        return console.log('ola', item);
+        return console.log('ola2', item);
         if (!item.description && !item.amount) return; // Don't save empty rows
         try {
             if (item.id) {
@@ -83,6 +93,7 @@ export default function Expenses() {
             render: (item: Expense, index: number) => (
                 <CustomInput
                     value={item.description}
+                    onFocus={() => handleFocus(item.description)}
                     onChange={val => handleCellChange(index, 'description', val.toString())}
                     onBlur={() => handleSave(index)}
                     textSize="text-sm"
@@ -96,10 +107,11 @@ export default function Expenses() {
             render: (item: Expense, index: number) => (
                 <CustomInput
                     value={item.amount} // Ensure 'item' is defined in your render function
+                    onFocus={() => handleFocus(item.amount)}
                     onChange={val => handleCellChange(index, 'amount', val)}
                     onBlur={() => handleSave(index)}
                     formatCurrency={true}
-                    prepend="R$"
+                    prepend="$"
                 />
             ),
         },
