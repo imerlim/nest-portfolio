@@ -76,7 +76,7 @@ export default function Expenses() {
         try {
             if (item.id) {
                 // SCENARIO A: Item already has an ID (Update)
-                await api.put(`/expenses/${item.id}`, item);
+                await api.patch(`/expenses/${item.id}`, item);
                 console.log('Updated existing record');
             } else {
                 // SCENARIO B: Item is new (Create)
@@ -89,7 +89,6 @@ export default function Expenses() {
                 updatedExpenses[index] = savedItemFromServer; // Replace local empty row with DB row
 
                 setExpenses(updatedExpenses);
-                console.log('Created new record and synced ID');
             }
 
             // 4. Update the "Original Value" ref so the guard works for the next edit
@@ -110,6 +109,7 @@ export default function Expenses() {
                     onFocus={() => handleFocus(item.description)}
                     onChange={val => handleCellChange(index, 'description', val.toString())}
                     onBlur={() => handleSave(index)}
+                    onKeyDown={e => e.key === 'Enter' && handleSave(index)}
                     textSize="text-sm"
                     placeholder="Description..."
                 />
@@ -124,6 +124,7 @@ export default function Expenses() {
                     onFocus={() => handleFocus(item.amount)}
                     onChange={val => handleCellChange(index, 'amount', val)}
                     onBlur={() => handleSave(index)}
+                    onKeyDown={e => e.key === 'Enter' && handleSave(index)}
                     formatCurrency={true}
                     prepend="$"
                 />

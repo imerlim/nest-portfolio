@@ -6,6 +6,7 @@ interface CustomInputProps {
     onChange: (value: string | number) => void;
     onBlur?: () => void;
     onFocus?: () => void; // 👈 1. ADICIONE ISSO NA INTERFACE
+    onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
     label?: string;
     id?: string;
     name?: string;
@@ -62,6 +63,7 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
         autofocus,
         onBlur,
         onFocus,
+        onKeyDown,
     } = props;
 
     const inputRef = useRef<HTMLInputElement>(null);
@@ -171,6 +173,7 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
                             onBlur={handleBlur}
                             // Helpful: auto-select text when clicking into the field
                             onFocus={onFocus}
+                            onKeyDown={onKeyDown}
                             className={`
                                 w-full p-2 text-slate-900 bg-transparent dark:text-white placeholder-slate-400 
                                 focus:outline-none border-none ${textSize}

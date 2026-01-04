@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './auth/Login';
 import Register from './auth/Register';
 import Expenses from './pages/Expenses';
+import ProtectedRoute from './ProtectedRoute';
 
 function App() {
     return (
@@ -12,7 +13,14 @@ function App() {
 
                 <Route path="/register" element={<Register />} />
 
-                <Route path="/expenses" element={<Expenses />} />
+                <Route
+                    path="/expenses"
+                    element={
+                        <ProtectedRoute>
+                            <Expenses />
+                        </ProtectedRoute>
+                    }
+                />
 
                 {/* Redireciona a raiz "/" para o login por padrão */}
                 <Route path="/" element={<Navigate to="/login" />} />
