@@ -1,5 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Request,
+  UseGuards,
+  Get,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ExpensesService } from './expenses.service';
+import { jwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 
@@ -7,9 +18,12 @@ import { UpdateExpenseDto } from './dto/update-expense.dto';
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}
 
+  @UseGuards(jwtAuthGuard)
   @Post()
-  create(@Body() createExpenseDto: CreateExpenseDto) {
-    return this.expensesService.create(createExpenseDto);
+  async create(@Body() createExpenseDto: CreateExpenseDto, @Request() req) {
+    // O jwtAuthGuard valida o token e coloca o usuário no objeto 'req'
+    const userId = req.user.id;
+    return this.expensesService.create(createExpenseDto, userId);
   }
 
   @Get()

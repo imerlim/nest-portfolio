@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 
 @Injectable()
-export class AuthGuard implements CanActivate {
+export class jwtAuthGuard implements CanActivate {
   constructor(private jwtService: JwtService) {}
 
   // O nome do método PRECISA ser canActivate (com o 'can' na frente)
@@ -24,7 +24,7 @@ export class AuthGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: 'SUA_CHAVE_SUPER_SECRETA_123', // Use a mesma chave do AuthModule
       });
-      
+
       // Anexamos os dados do usuário na requisição para uso futuro
       request['user'] = payload;
     } catch {
