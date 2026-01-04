@@ -27,6 +27,7 @@ export class AuthService {
 
     // 3. Gerar o Token JWT (o "crachá")
     const payload = { sub: user.id, email: user.email };
+
     return {
       access_token: await this.jwtService.signAsync(payload),
     };

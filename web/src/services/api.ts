@@ -4,6 +4,20 @@ const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
 });
 
+api.interceptors.request.use(
+    config => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            // This puts the "ID Badge" on every request
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    error => {
+        return Promise.reject(error);
+    }
+);
+
 // A mesma lógica que você tinha no Vue 3, agora centralizada aqui:
 api.interceptors.response.use(
     response => response,

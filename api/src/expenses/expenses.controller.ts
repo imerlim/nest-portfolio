@@ -10,7 +10,7 @@ import {
   Delete,
 } from '@nestjs/common';
 import { ExpensesService } from './expenses.service';
-import { jwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 
@@ -18,17 +18,18 @@ import { UpdateExpenseDto } from './dto/update-expense.dto';
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}
 
-  @UseGuards(jwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @Post()
   async create(@Body() createExpenseDto: CreateExpenseDto, @Request() req) {
-    // O jwtAuthGuard valida o token e coloca o usuário no objeto 'req'
+    // O JwtAuthGuard valida o token e coloca o usuário no objeto 'req'
     const userId = req.user.id;
     return this.expensesService.create(createExpenseDto, userId);
   }
 
   @Get()
-  findAll() {
-    return this.expensesService.findAll();
+  async findAll(@Request() req) {
+    const userId = req.user.id; // 👈 Get only the expenses for the logged-in user
+    return this.expensesService.findAll(userId);
   }
 
   @Get(':id')

@@ -80,7 +80,7 @@ export default function Expenses() {
                 console.log('Updated existing record');
             } else {
                 // SCENARIO B: Item is new (Create)
-                const response = await api.post('/create-expenses', item);
+                const response = await api.post('/expenses', item);
 
                 // 3. THE FIX: Sync the ID from the Database
                 const savedItemFromServer = response.data; // This contains the new ID

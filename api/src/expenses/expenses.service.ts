@@ -7,6 +7,10 @@ import { UpdateExpenseDto } from './dto/update-expense.dto';
 export class ExpensesService {
   constructor(private prisma: PrismaService) {}
   async create(data: any, userId: number) {
+    console.log('--- DEBUG START ---');
+    console.log('Incoming Data:', data);
+    console.log('User ID:', userId);
+    console.log('--- DEBUG END ---');
     return this.prisma.expense.create({
       data: {
         description: data.description,
@@ -27,8 +31,11 @@ export class ExpensesService {
     });
   }
 
-  findAll() {
-    return `This action returns all expenses`;
+  async findAll(userId: number) {
+    return this.prisma.expense.findMany({
+      where: { userId }, // 👈 This filters data so users don't see each other's expenses
+      orderBy: { date: 'desc' }, // Optional: shows newest first
+    });
   }
 
   findOne(id: number) {
