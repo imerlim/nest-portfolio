@@ -31,6 +31,7 @@ interface CustomInputProps {
     textSize?: 'text-xs' | 'text-sm' | 'text-base' | 'text-lg' | 'text-xl';
     formatCurrency?: boolean;
     autofocus?: boolean;
+    className?: string;
 }
 
 const CustomInput = forwardRef((props: CustomInputProps, ref) => {
@@ -64,6 +65,7 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
         onBlur,
         onFocus,
         onKeyDown,
+        className = '',
     } = props;
 
     const inputRef = useRef<HTMLInputElement>(null);
@@ -131,7 +133,7 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
     const iconSize = textSize === 'text-xs' || textSize === 'text-sm' ? 18 : 22;
 
     return (
-        <div className="w-full">
+        <div className={className || 'w-full'}>
             {label && (
                 <label htmlFor={id} className={`block mb-1 font-medium text-slate-900 dark:text-white ${textSize}`}>
                     {label}
@@ -158,6 +160,7 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
                         )}
 
                         <input
+                            tabIndex={0}
                             ref={inputRef}
                             id={id}
                             name={name}
@@ -175,10 +178,9 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
                             onFocus={onFocus}
                             onKeyDown={onKeyDown}
                             className={`
-                                w-full p-2 text-slate-900 bg-transparent dark:text-white placeholder-slate-400 
-                                focus:outline-none border-none ${textSize}
-                                ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-                            `}
+                            w-full p-2 text-slate-900 bg-transparent dark:text-white placeholder-slate-400 
+                            focus:outline-none border-none ${textSize}
+                            ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className || ''} `}
                         />
 
                         {append && (

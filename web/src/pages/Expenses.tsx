@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import api from '../services/api.ts';
 import Table from '../components/Table';
 import CustomInput from '../components/CustomInput.tsx';
+import CustomButton from '../components/CustomButton.tsx';
 
 export interface Expense {
     id?: number;
@@ -13,6 +14,7 @@ export interface Expense {
 
 export default function Expenses() {
     const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [addNumberLines, setAddNumberLines] = useState<number>(1);
     const [loading, setLoading] = useState(true);
     const originalValue = useRef<number | string>(0);
 
@@ -65,37 +67,46 @@ export default function Expenses() {
     // 4. Save logic (Triggers when user clicks outside the input)
     const handleSave = async (index: number) => {
         const item = expenses[index];
-        const currentValue = item.amount;
-
-        // 1. Guard Clause (Dirty Check)
-        if (currentValue === originalValue.current) return;
-
-        // 2. Avoid saving completely empty rows
-        if (!item.description && !item.amount) return;
+        if (item.amount === originalValue.current) return;
 
         try {
             if (item.id) {
-                // SCENARIO A: Item already has an ID (Update)
                 await api.patch(`/expenses/${item.id}`, item);
-                console.log('Updated existing record');
             } else {
-                // SCENARIO B: Item is new (Create)
                 const response = await api.post('/expenses', item);
+                const savedItem = response.data;
 
-                // 3. THE FIX: Sync the ID from the Database
-                const savedItemFromServer = response.data; // This contains the new ID
-
-                const updatedExpenses = [...expenses];
-                updatedExpenses[index] = savedItemFromServer; // Replace local empty row with DB row
-
-                setExpenses(updatedExpenses);
+                // ATUALIZAÇÃO SUTIL:
+                setExpenses(prev => {
+                    const newArr = [...prev];
+                    newArr[index] = { ...newArr[index], id: savedItem.id }; // Mantém o que o usuário digitou, só injeta o ID
+                    return newArr;
+                });
             }
-
-            // 4. Update the "Original Value" ref so the guard works for the next edit
-            originalValue.current = currentValue;
+            originalValue.current = item.amount;
         } catch (error) {
             console.error('Save error:', error);
-            // Optional: Reset the UI value or show a toast notification error
+        }
+    };
+
+    const handleDelete = async (item: Expense) => {
+        // 2. Se o item não tem ID, ele só existe na tela, basta limpar localmente
+        if (!item.id) {
+            const index = expenses.findIndex(e => e === item);
+            const updated = [...expenses];
+            updated[index] = { description: '', amount: 0 };
+            setExpenses(updated);
+            return;
+        }
+
+        try {
+            // 3. Chamada ao Backend
+            await api.delete(`/expenses/${item.id}`);
+
+            // 4. Atualiza o estado: limpa os dados mantendo a linha na planilha
+            setExpenses(prev => prev.map(exp => (exp.id === item.id ? { description: '', amount: 0 } : exp)));
+        } catch (error) {
+            console.error('Error deleting expense:', error);
         }
     };
 
@@ -108,7 +119,6 @@ export default function Expenses() {
                     value={item.description}
                     onFocus={() => handleFocus(item.description)}
                     onChange={val => handleCellChange(index, 'description', val.toString())}
-                    onBlur={() => handleSave(index)}
                     onKeyDown={e => e.key === 'Enter' && handleSave(index)}
                     textSize="text-sm"
                     placeholder="Description..."
@@ -123,7 +133,6 @@ export default function Expenses() {
                     value={item.amount} // Ensure 'item' is defined in your render function
                     onFocus={() => handleFocus(item.amount)}
                     onChange={val => handleCellChange(index, 'amount', val)}
-                    onBlur={() => handleSave(index)}
                     onKeyDown={e => e.key === 'Enter' && handleSave(index)}
                     formatCurrency={true}
                     prepend="$"
@@ -139,41 +148,104 @@ export default function Expenses() {
 
     return (
         <div className="min-h-screen bg-slate-900">
-            <nav className="sticky top-0 z-50 flex justify-between items-center px-10 py-4 bg-slate-950 text-white shadow-lg">
-                <h1 className="text-xl font-bold tracking-tight">Nest Portfolio</h1>
-                <div className="flex items-center gap-6">
-                    {/* Total Display */}
-                    <div className="text-right">
-                        <p className="text-xs text-slate-400 uppercase font-bold">Total Balance</p>
-                        <p className={`text-xl font-mono ${totalBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            $ {totalBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
+            <nav className="sticky top-0 z-50 bg-slate-950 text-white shadow-lg 2xl:px-66 lg:px-29 px-4 py-4">
+                {/* Container principal que decide se empilha ou fica em linha */}
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                    {/* PARTE 1: Logo e Botão de Sair (Mobile) */}
+                    <div className="flex justify-between items-center w-full md:w-auto">
+                        <h1 className="text-xl font-bold tracking-tight">Nest Project</h1>
+
+                        {/* Este botão SÓ aparece no celular (md:hidden) */}
+                        <button
+                            onClick={handleLogout}
+                            className="md:hidden bg-red-500 hover:bg-red-600 px-4 py-1.5 rounded-md font-bold text-sm transition-all"
+                        >
+                            Logout
+                        </button>
                     </div>
-                    <button
-                        onClick={handleLogout}
-                        className="cursor-pointer bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-md font-bold transition-all shadow-sm"
-                    >
-                        Logout
-                    </button>
+
+                    {/* PARTE 2: Saldo e Botão de Sair (Desktop) */}
+                    <div className="flex items-center justify-between md:justify-end gap-8 w-full md:w-auto border-t border-slate-800 pt-3 md:border-none md:pt-0">
+                        {/* Display do Saldo */}
+                        <div className="text-left md:text-right">
+                            <p className="text-[10px] md:text-xs text-slate-400 uppercase font-bold leading-none mb-1">Total Balance</p>
+                            <p className={`text-lg md:text-xl font-mono ${totalBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                $ {totalBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </p>
+                        </div>
+
+                        {/* Este botão SÓ aparece no computador (hidden md:block) */}
+                        <button
+                            onClick={handleLogout}
+                            className="hidden md:block bg-red-500 hover:bg-red-600 px-5 py-2 rounded-md font-bold transition-all shadow-sm"
+                        >
+                            Logout
+                        </button>
+                    </div>
                 </div>
             </nav>
 
-            <main className="p-8 max-w-7xl mx-auto">
-                <header className="mb-8">
-                    <h2 className="text-3xl font-extrabold text-slate-100">Financial Worksheet</h2>
-                    <p className="text-slate-400">Directly edit rows to save data</p>
-                </header>
+            <main>
+                <div className="relative isolate overflow-hidden text-white dark:text-slate-300 bg-slate-100 dark:bg-slate-900 min-h-screen sm:px-5 sm:pt-0">
+                    <div className="container mx-auto sm:px-16">
+                        <div className="grid grid-cols-1 gap-x-8 gap-y-8 px-4 py-11 sm:px-6 lg:grid-cols-6 lg:px-8">
+                            <div className="lg:col-span-3">
+                                <header className="mb-8">
+                                    <h2 className="lg:text-3xl text-xl font-extrabold text-slate-100">Financial Worksheet Expenses</h2>
+                                    <p className="text-slate-400">Directly edit rows and press enter to save data</p>
+                                </header>
+                            </div>
 
-                <div className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
-                    <Table
-                        headers={tableHeaders}
-                        items={expenses}
-                        loading={loading}
-                        showSearch={false}
-                        showActions={true}
-                        actionType="delete"
-                        onAction={item => console.log('Apagar:', item.id)}
-                    />
+                            <div className="lg:col-span-3 flex lg:justify-end self-end">
+                                <CustomInput
+                                    className="mr-2"
+                                    value={addNumberLines}
+                                    onChange={val => setAddNumberLines(Number(val))}
+                                    type="number"
+                                />
+                                <CustomButton>Adicionar linhas</CustomButton>
+                            </div>
+
+                            <div className="lg:col-span-6 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
+                                <Table
+                                    headers={tableHeaders}
+                                    items={expenses}
+                                    loading={loading}
+                                    showSearch={true}
+                                    showActions={true}
+                                    actionType="delete"
+                                    onAction={item => handleDelete(item)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="container mx-auto sm:px-16">
+                        <div className="grid grid-cols-1 gap-x-8 gap-y-8 px-4 py-11 sm:px-6 lg:grid-cols-6 lg:px-8">
+                            <div className="lg:col-span-5">
+                                <header className="mb-8">
+                                    <h2 className="lg:text-3xl text-xl font-extrabold text-slate-100">Financial Worksheet Incomes</h2>
+                                    <p className="text-slate-400">Directly edit rows and press enter to save data</p>
+                                </header>
+                            </div>
+
+                            <div className="lg:col-span-1 flex lg:justify-end self-end">
+                                <CustomButton>testes</CustomButton>
+                            </div>
+
+                            <div className="lg:col-span-6 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
+                                <Table
+                                    headers={tableHeaders}
+                                    items={expenses}
+                                    loading={loading}
+                                    showSearch={true}
+                                    showActions={true}
+                                    actionType="delete"
+                                    onAction={item => console.log('Apagar:', item.id)}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </main>
         </div>

@@ -190,32 +190,34 @@ const Table: React.FC<TableProps> = ({
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
-                        {paginatedItems.map((item, rowIndex) => (
-                            <tr key={item.id || rowIndex} className="hover:bg-slate-800/50 transition-colors">
-                                {headers.map(header => (
-                                    <td key={header.key} className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
-                                        {/* 1. Check if we provided a special 'render' function for this column */}
-                                        {header.render
-                                            ? // 2. If yes, run that function (which returns your CustomInput)
-                                              header.render(item, rowIndex)
-                                            : // 3. If no, just show the text inside the data
-                                              (item[header.key as keyof typeof item] as React.ReactNode)}
-                                    </td>
-                                ))}
+                        {paginatedItems.map((item, rowIndex) => {
+                            // Calculamos o índice real aqui
+                            const globalIndex = (currentPage - 1) * localItemsPerPage + rowIndex;
 
-                                {/* 4. Actions Column (Trash icon) */}
-                                {showActions && (
-                                    <td className="px-6 py-4 text-right">
-                                        <button
-                                            onClick={() => onAction?.(item)}
-                                            className="text-red-400 hover:text-red-300 transition-colors"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </td>
-                                )}
-                            </tr>
-                        ))}
+                            return (
+                                <tr key={item.id || `row-${globalIndex}`} className="hover:bg-slate-800/50 transition-colors">
+                                    {headers.map(header => (
+                                        <td key={header.key} className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                                            {header.render
+                                                ? // PASSAMOS O GLOBAL INDEX AQUI
+                                                  header.render(item, globalIndex)
+                                                : (item[header.key as keyof typeof item] as React.ReactNode)}
+                                        </td>
+                                    ))}
+
+                                    {showActions && (
+                                        <td className="px-4 py-2 text-right">
+                                            <button
+                                                onClick={() => onAction?.(item)}
+                                                className="text-red-400 hover:text-red-300 transition-colors p-2"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </td>
+                                    )}
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
