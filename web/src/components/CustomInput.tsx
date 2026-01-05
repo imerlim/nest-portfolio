@@ -5,8 +5,9 @@ interface CustomInputProps {
     value: string | number;
     onChange: (value: string | number) => void;
     onBlur?: () => void;
-    onFocus?: () => void; // 👈 1. ADICIONE ISSO NA INTERFACE
+    onFocus?: () => void;
     onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+
     label?: string;
     id?: string;
     name?: string;
@@ -15,26 +16,33 @@ interface CustomInputProps {
     disabled?: boolean;
     required?: boolean;
     maxlength?: number;
+
     prepend?: ReactNode;
     append?: ReactNode;
+
     showSearch?: boolean;
     showClear?: boolean;
     showTrash?: boolean;
     showAdd?: boolean;
+
     onSearch?: () => void;
     onClear?: () => void;
     onTrash?: () => void;
     onAdd?: () => void;
+
     error?: boolean;
     errorMessage?: string;
     largeAppend?: boolean;
+
     textSize?: 'text-xs' | 'text-sm' | 'text-base' | 'text-lg' | 'text-xl';
     formatCurrency?: boolean;
     autofocus?: boolean;
-    className?: string;
+
+    className?: string; // ✅ wrapper
+    inputClassName?: string; // ✅ input
 }
 
-const CustomInput = forwardRef((props: CustomInputProps, ref) => {
+const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>((props, ref) => {
     const {
         value,
         onChange,
@@ -66,59 +74,53 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
         onFocus,
         onKeyDown,
         className = '',
+        inputClassName = '',
     } = props;
 
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // --- CURRENCY LOGIC ---
+    useImperativeHandle(ref, () => inputRef.current as HTMLInputElement);
 
+    // --- Currency Formatting Logic ---
     const formatarMoeda = (valor: string | number) => {
-        // Safety: ensure we never process null/undefined
-        if (valor === null || valor === undefined) return '0,00';
+        if (valor === null || valor === undefined || valor === '') return '$0.00';
 
         let numericValue: number;
         if (typeof valor === 'number') {
-            // Convert decimal (5.5) to cents (550) for integer math
             numericValue = Math.round(valor * 100);
         } else {
-            // String cleaning: "R$ 1.234,56" -> "123456"
-            const cleanString = valor.replace(/\D/g, '');
+            const cleanString = String(valor).replace(/\D/g, '');
             numericValue = parseInt(cleanString, 10);
         }
 
-        if (isNaN(numericValue) || numericValue === 0) return '0,00';
+        if (isNaN(numericValue) || numericValue === 0) return '$0.00';
 
-        return new Intl.NumberFormat('pt-BR', {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         }).format(numericValue / 100);
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // --- Event Handlers ---
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = e.target.value;
+
         if (formatCurrency) {
-            const onlyNumbers = e.target.value.replace(/\D/g, '');
-            // Convert typing to decimal (e.g. "150" -> 1.5)
-            const numericValue = onlyNumbers ? parseInt(onlyNumbers, 10) / 100 : 0;
+            // Remove everything except numbers to get the "cents"
+            const cleanString = rawValue.replace(/\D/g, '');
+            if (cleanString === '') {
+                onChange(0);
+                return;
+            }
+            // Convert to decimal (e.g., "1250" becomes 12.50)
+            const numericValue = parseInt(cleanString, 10) / 100;
             onChange(numericValue);
         } else {
-            onChange(e.target.value);
+            onChange(rawValue);
         }
     };
-
-    const handleBlur = () => {
-        if (onBlur) onBlur();
-    };
-
-    // Use empty string fallback to prevent "Controlled to Uncontrolled" error
-    const displayValue = formatCurrency ? formatarMoeda(value) : value ?? '';
-
-    // --- COMPONENT LOGIC ---
-
-    useImperativeHandle(ref, () => ({
-        focus: () => {
-            inputRef.current?.focus();
-        },
-    }));
 
     const hasButtons = showSearch || showClear || showTrash || showAdd;
 
@@ -132,105 +134,78 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
 
     const iconSize = textSize === 'text-xs' || textSize === 'text-sm' ? 18 : 22;
 
+    // Decide what to show in the input box
+    const displayValue = formatCurrency ? formatarMoeda(value) : value ?? '';
+
     return (
-        <div className={className || 'w-full'}>
+        <div className={`w-full ${className}`}>
             {label && (
-                <label htmlFor={id} className={`block mb-1 font-medium text-slate-900 dark:text-white ${textSize}`}>
+                <label htmlFor={id} className={`block mb-1 font-medium ${textSize}`}>
                     {label}
                 </label>
             )}
 
             <div className={`flex items-center w-full ${hasButtons ? 'gap-2' : ''}`}>
-                <div className="flex-grow min-w-0">
+                <div className="grow min-w-0">
                     <div
                         className={`
-                            flex items-center w-full overflow-hidden rounded-lg bg-slate-50 dark:bg-slate-700 border transition-all
+                            flex items-center w-full rounded-lg bg-slate-50 dark:bg-slate-700
                             ${largeAppend ? 'px-0' : 'px-2'}
                             ${
                                 error
                                     ? 'border-red-500 ring-1 ring-red-500'
-                                    : 'border-slate-300 dark:border-slate-600 focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500'
+                                    : 'border-slate-300 focus-within:ring-1 focus-within:ring-blue-500'
                             }
                         `}
                     >
-                        {prepend && (
-                            <div className={`flex items-center gap-1 select-none text-slate-500 dark:text-slate-400 ${textSize}`}>
-                                {prepend}
-                            </div>
-                        )}
+                        {prepend && <div className="mr-1">{prepend}</div>}
 
                         <input
-                            tabIndex={0}
                             ref={inputRef}
                             id={id}
                             name={name}
-                            type={type}
+                            type={formatCurrency ? 'text' : type} // Force text mode for currency masking
                             autoFocus={autofocus}
                             placeholder={placeholder}
                             disabled={disabled}
                             required={required}
                             maxLength={maxlength}
-                            // CRITICAL FIX: The "?? ''" ensures the input is always controlled
-                            value={displayValue ?? ''}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            // Helpful: auto-select text when clicking into the field
+                            value={displayValue}
+                            onChange={handleInputChange}
+                            onBlur={onBlur}
                             onFocus={onFocus}
                             onKeyDown={onKeyDown}
                             className={`
-                            w-full p-2 text-slate-900 bg-transparent dark:text-white placeholder-slate-400 
-                            focus:outline-none border-none ${textSize}
-                            ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className || ''} `}
+                                w-full p-2 bg-transparent outline-none
+                                ${textSize}
+                                ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                                ${inputClassName}
+                            `}
                         />
 
-                        {append && (
-                            <div
-                                className={`
-                                    flex items-center justify-end gap-1 text-slate-500 dark:text-slate-400
-                                    ${textSize} ${largeAppend ? 'w-60' : 'w-auto px-2'}
-                                `}
-                            >
-                                {append}
-                            </div>
-                        )}
+                        {append && <div className={`${largeAppend ? 'w-60' : 'px-2'}`}>{append}</div>}
                     </div>
                 </div>
 
                 {hasButtons && (
-                    <div className="flex-shrink-0 flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                         {showTrash && (
-                            <button
-                                type="button"
-                                onClick={onTrash}
-                                className={`rounded-md bg-red-600 text-white hover:bg-red-500 transition ${buttonPadding}`}
-                            >
+                            <button onClick={onTrash} className={`bg-red-600 text-white rounded ${buttonPadding}`}>
                                 <Trash2 size={iconSize} />
                             </button>
                         )}
                         {showClear && (
-                            <button
-                                type="button"
-                                onClick={onClear}
-                                className={`rounded-md bg-slate-600 text-white hover:bg-slate-500 transition ${buttonPadding}`}
-                            >
+                            <button onClick={onClear} className={`bg-slate-600 text-white rounded ${buttonPadding}`}>
                                 <X size={iconSize} />
                             </button>
                         )}
                         {showSearch && (
-                            <button
-                                type="button"
-                                onClick={onSearch}
-                                className={`rounded-md bg-blue-600 text-white hover:bg-blue-500 transition ${buttonPadding}`}
-                            >
+                            <button onClick={onSearch} className={`bg-blue-600 text-white rounded ${buttonPadding}`}>
                                 <Search size={iconSize} />
                             </button>
                         )}
                         {showAdd && (
-                            <button
-                                type="button"
-                                onClick={onAdd}
-                                className={`rounded-md bg-emerald-600 text-white hover:bg-emerald-500 transition ${buttonPadding}`}
-                            >
+                            <button onClick={onAdd} className={`bg-emerald-600 text-white rounded ${buttonPadding}`}>
                                 <Plus size={iconSize} />
                             </button>
                         )}
@@ -244,5 +219,4 @@ const CustomInput = forwardRef((props: CustomInputProps, ref) => {
 });
 
 CustomInput.displayName = 'CustomInput';
-
 export default CustomInput;

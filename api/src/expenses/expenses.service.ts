@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -35,7 +35,15 @@ export class ExpensesService {
     return `This action returns a #${id} expense`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} expense`;
+  async remove(id: number) {
+    try {
+      // No Prisma, você pode tentar deletar direto ou buscar primeiro
+      return await this.prisma.expense.delete({
+        where: { id },
+      });
+    } catch (error) {
+      // O Prisma lança um erro específico se o ID não existir
+      throw new NotFoundException(`Expense with ID ${id} not found`);
+    }
   }
 }

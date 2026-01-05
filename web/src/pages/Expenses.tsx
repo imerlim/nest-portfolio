@@ -3,6 +3,7 @@ import api from '../services/api.ts';
 import Table from '../components/Table';
 import CustomInput from '../components/CustomInput.tsx';
 import CustomButton from '../components/CustomButton.tsx';
+import CustomSelect, { type SelectOption } from '../components/CustomSelect.tsx';
 
 export interface Expense {
     id?: number;
@@ -14,9 +15,32 @@ export interface Expense {
 
 export default function Expenses() {
     const [expenses, setExpenses] = useState<Expense[]>([]);
-    const [addNumberLines, setAddNumberLines] = useState<number>(1);
+    const [addNumberLines, setAddNumberLines] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const originalValue = useRef<number | string>(0);
+    const monthOptions: SelectOption[] = [
+        { label: 'January', value: 1 },
+        { label: 'February', value: 2 },
+        { label: 'March', value: 3 },
+        { label: 'April', value: 4 },
+        { label: 'May', value: 5 },
+        { label: 'June', value: 6 },
+        { label: 'July', value: 7 },
+        { label: 'August', value: 8 },
+        { label: 'September', value: 9 },
+        { label: 'October', value: 10 },
+        { label: 'November', value: 11 },
+        { label: 'December', value: 12 },
+    ];
+
+    const yearOptions: SelectOption[] = useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        // Gera uma lista de 10 anos (5 atrás, ano atual, 4 frente)
+        return Array.from({ length: 100 }, (_, i) => {
+            const year = currentYear - 50 + i;
+            return { label: String(year), value: year };
+        });
+    }, []);
 
     const handleFocus = (val: number | string) => {
         originalValue.current = val;
@@ -55,6 +79,25 @@ export default function Expenses() {
         };
         fetchExpenses();
     }, []);
+
+    const handleAddLines = (qtd: number) => {
+        // 1. Explicitly type the array as Expense[] to solve image_aa3902.png
+        const blankLines: Expense[] = [];
+
+        for (let i = 0; i < qtd; i++) {
+            blankLines.push({
+                description: '',
+                amount: 0,
+                // Add other required fields from your Expense interface here
+            });
+        }
+
+        // 2. Concatenate correctly using the spread operator
+        setExpenses(prev => [...prev, ...blankLines]);
+
+        // 3. Reset UI state
+        setAddNumberLines(1);
+    };
 
     // 3. Handle changes in the "Grid"
     const handleCellChange = (index: number, field: string, value: any) => {
@@ -167,10 +210,24 @@ export default function Expenses() {
                     {/* PARTE 2: Saldo e Botão de Sair (Desktop) */}
                     <div className="flex items-center justify-between md:justify-end gap-8 w-full md:w-auto border-t border-slate-800 pt-3 md:border-none md:pt-0">
                         {/* Display do Saldo */}
-                        <div className="text-left md:text-right">
-                            <p className="text-[10px] md:text-xs text-slate-400 uppercase font-bold leading-none mb-1">Total Balance</p>
-                            <p className={`text-lg md:text-xl font-mono ${totalBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                $ {totalBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        <div className="text-center md:text-right">
+                            <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">Total Income</p>
+                            <p className="text-lg md:text-xl font-mono text-emerald-400">
+                                $ {totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </p>
+                        </div>
+
+                        <div className="text-center md:text-right border-l border-slate-700 lg:px-6 px-5">
+                            <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">Total Expense</p>
+                            <p className="text-lg md:text-xl font-mono text-red-400">
+                                $ {totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </p>
+                        </div>
+
+                        <div className="text-center md:text-right bg-slate-800/50 p-2 rounded-lg px-4 border border-slate-700">
+                            <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">Total Balance</p>
+                            <p className={`text-lg md:text-2xl font-mono ${totalBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                $ {totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </p>
                         </div>
 
@@ -189,21 +246,34 @@ export default function Expenses() {
                 <div className="relative isolate overflow-hidden text-white dark:text-slate-300 bg-slate-100 dark:bg-slate-900 min-h-screen sm:px-5 sm:pt-0">
                     <div className="container mx-auto sm:px-16">
                         <div className="grid grid-cols-1 gap-x-8 gap-y-8 px-4 py-11 sm:px-6 lg:grid-cols-6 lg:px-8">
-                            <div className="lg:col-span-3">
+                            <div className="lg:col-span-6">
                                 <header className="mb-8">
                                     <h2 className="lg:text-3xl text-xl font-extrabold text-slate-100">Financial Worksheet Expenses</h2>
                                     <p className="text-slate-400">Directly edit rows and press enter to save data</p>
                                 </header>
                             </div>
 
-                            <div className="lg:col-span-3 flex lg:justify-end self-end">
-                                <CustomInput
-                                    className="mr-2"
+                            <div className="lg:col-span-2 flex lg:justify-end self-end gap-x-2">
+                                <CustomSelect
                                     value={addNumberLines}
                                     onChange={val => setAddNumberLines(Number(val))}
-                                    type="number"
+                                    options={monthOptions}
+                                    textSize="text-sm"
                                 />
-                                <CustomButton>Adicionar linhas</CustomButton>
+                                <CustomSelect
+                                    value={addNumberLines}
+                                    onChange={val => setAddNumberLines(Number(val))}
+                                    options={yearOptions}
+                                    textSize="text-sm"
+                                />
+                            </div>
+
+                            <div className="lg:col-span-4 flex items-end justify-end gap-2">
+                                <div className="w-40">
+                                    <CustomInput value={addNumberLines} onChange={val => setAddNumberLines(Number(val))} type="number" />
+                                </div>
+
+                                <CustomButton onClick={() => handleAddLines(addNumberLines)}>Adicionar linhas</CustomButton>
                             </div>
 
                             <div className="lg:col-span-6 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">

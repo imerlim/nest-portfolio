@@ -164,7 +164,7 @@ const CustomSelect = forwardRef<CustomSelectHandle, CustomSelectProps>((props, r
                             `}
                         >
                             <option value="" disabled>
-                                {placeholder || 'Selecione'}
+                                {placeholder || 'Select'}
                             </option>
                             {options.map((option, index) => (
                                 <option key={index} value={option.value}>
