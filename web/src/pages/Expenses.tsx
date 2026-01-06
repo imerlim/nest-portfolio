@@ -131,9 +131,14 @@ export default function Expenses() {
     };
 
     // 4. Save logic (Triggers when user clicks outside the input)
-    const handleSave = async (index: number) => {
+    const handleSave = async (index: number, field: string) => {
         const item = expenses[index];
-        if (item.amount === originalValue.current) return;
+        console.log(item);
+        if (field == 'amount') {
+            if (item.amount === originalValue.current) return;
+        } else {
+            if (item.description === originalValue.current) return;
+        }
 
         try {
             if (item.id) {
@@ -152,6 +157,13 @@ export default function Expenses() {
             originalValue.current = item.amount;
         } catch (error) {
             console.error('Save error:', error);
+        } finally {
+            setTimeout(() => {
+                if (field === 'description') {
+                    const nextInput = document.getElementById(`amount-${index}`);
+                    nextInput?.focus();
+                }
+            }, 1);
         }
     };
 
@@ -182,10 +194,12 @@ export default function Expenses() {
             key: 'description',
             render: (item: Expense, index: number) => (
                 <CustomInput
+                    id={`description-${index}`}
                     value={item.description}
                     onFocus={() => handleFocus(item.description)}
                     onChange={val => handleCellChange(index, 'description', val.toString())}
-                    onKeyDown={e => e.key === 'Enter' && handleSave(index)}
+                    onBlur={() => handleSave(index, 'description')}
+                    onKeyDown={e => e.key === 'Enter' && handleSave(index, 'description')}
                     textSize="text-sm"
                     placeholder="Description..."
                 />
@@ -196,10 +210,12 @@ export default function Expenses() {
             key: 'amount',
             render: (item: Expense, index: number) => (
                 <CustomInput
+                    id={`amount-${index}`}
                     value={item.amount} // Ensure 'item' is defined in your render function
                     onFocus={() => handleFocus(item.amount)}
                     onChange={val => handleCellChange(index, 'amount', val)}
-                    onKeyDown={e => e.key === 'Enter' && handleSave(index)}
+                    onBlur={() => handleSave(index, 'amount')}
+                    onKeyDown={e => e.key === 'Enter' && handleSave(index, 'amount')}
                     formatCurrency={true}
                     prepend="$"
                 />
