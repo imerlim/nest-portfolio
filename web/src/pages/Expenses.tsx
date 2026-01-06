@@ -15,29 +15,30 @@ export interface Expense {
 
 export default function Expenses() {
     const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [month, setMonth] = useState<string>();
+    const [year, setYear] = useState<number>();
     const [addNumberLines, setAddNumberLines] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const originalValue = useRef<number | string>(0);
     const monthOptions: SelectOption[] = [
-        { label: 'January', value: 1 },
-        { label: 'February', value: 2 },
-        { label: 'March', value: 3 },
-        { label: 'April', value: 4 },
-        { label: 'May', value: 5 },
-        { label: 'June', value: 6 },
-        { label: 'July', value: 7 },
-        { label: 'August', value: 8 },
-        { label: 'September', value: 9 },
-        { label: 'October', value: 10 },
-        { label: 'November', value: 11 },
-        { label: 'December', value: 12 },
+        { label: 'January', value: 'January' },
+        { label: 'February', value: 'February' },
+        { label: 'March', value: 'March' },
+        { label: 'April', value: 'April' },
+        { label: 'May', value: 'May' },
+        { label: 'June', value: 'June' },
+        { label: 'July', value: 'July' },
+        { label: 'August', value: 'August' },
+        { label: 'September', value: 'September' },
+        { label: 'October', value: 'October' },
+        { label: 'November', value: 'November' },
+        { label: 'December', value: 'December' },
     ];
-
     const yearOptions: SelectOption[] = useMemo(() => {
         const currentYear = new Date().getFullYear();
         // Gera uma lista de 10 anos (5 atrás, ano atual, 4 frente)
-        return Array.from({ length: 100 }, (_, i) => {
-            const year = currentYear - 50 + i;
+        return Array.from({ length: 35 }, (_, i) => {
+            const year = currentYear - 10 + i;
             return { label: String(year), value: year };
         });
     }, []);
@@ -52,32 +53,54 @@ export default function Expenses() {
     }, [expenses]);
 
     // 2. Fetch and Fill logic
-    useEffect(() => {
-        const fetchExpenses = async () => {
-            try {
-                const response = await api.get('/expenses');
-                const data = Array.isArray(response.data) ? response.data : [];
+    const findAll = async (selectedMonth?: string, selectedYear?: number) => {
+        try {
+            setLoading(true);
+            // 2. Fixed: Use params to filter by month/year in the backend
+            const response = await api.get('/expenses', { params: { month: selectedMonth || month, year: selectedYear || year } });
 
-                // Fill up to 50 lines with empty objects if data is short
-                const filledData = [...data];
-                while (filledData.length < 50) {
-                    filledData.push({ description: '', amount: 0 });
-                }
+            const data = Array.isArray(response.data) ? response.data : [];
 
-                setExpenses(filledData);
-            } catch (error) {
-                console.error('Error fetching:', error);
-                // Even on error, show 50 empty lines
-                setExpenses(
-                    Array(50)
-                        .fill(null)
-                        .map(() => ({ description: '', amount: 0 }))
-                );
-            } finally {
-                setLoading(false);
+            const filledData = [...data];
+            while (filledData.length < 50) {
+                // 3. Fixed: Added month/year to blank lines to maintain consistency
+                filledData.push({
+                    description: '',
+                    amount: 0,
+                    month: selectedMonth || month,
+                    year: selectedYear || year,
+                });
             }
-        };
-        fetchExpenses();
+
+            setExpenses(filledData);
+        } catch (error) {
+            console.error('Error fetching:', error);
+            setExpenses(
+                Array(50)
+                    .fill(null)
+                    .map(() => ({
+                        description: '',
+                        amount: 0,
+                        month: selectedMonth || month,
+                        year: selectedYear || year,
+                    }))
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const hoje = new Date();
+        const mesAtual = hoje.toLocaleString('en-US', { month: 'long' });
+        const anoAtual = hoje.getFullYear();
+
+        // Set initial states
+        setMonth(mesAtual);
+        setYear(anoAtual);
+
+        // 4. Fixed: Removed 'this.' and called function with current values
+        findAll(mesAtual, anoAtual);
     }, []);
 
     const handleAddLines = (qtd: number) => {
@@ -248,27 +271,43 @@ export default function Expenses() {
                         <div className="grid grid-cols-1 gap-x-8 gap-y-8 px-4 py-11 sm:px-6 lg:grid-cols-6 lg:px-8">
                             <div className="lg:col-span-6">
                                 <header className="mb-8">
-                                    <h2 className="lg:text-3xl text-xl font-extrabold text-slate-100">Financial Worksheet Expenses</h2>
+                                    <h2 className="lg:text-3xl md:text-2xl text-xl font-extrabold text-slate-100">
+                                        Financial Worksheet Expenses
+                                    </h2>
                                     <p className="text-slate-400">Directly edit rows and press enter to save data</p>
+                                </header>
+                                <header className="text-center">
+                                    <h2 className="lg:text-3xl md:text-2xl text-xl font-extrabold text-slate-100">
+                                        {' '}
+                                        {month}, {year}{' '}
+                                    </h2>
                                 </header>
                             </div>
 
                             <div className="lg:col-span-2 flex lg:justify-end self-end gap-x-2">
                                 <CustomSelect
-                                    value={addNumberLines}
-                                    onChange={val => setAddNumberLines(Number(val))}
+                                    value={month}
+                                    onChange={val => {
+                                        const newtMonth = String(val); // 1. Capture the new value
+                                        setMonth(newtMonth); // 2. Update state for the UI
+                                        findAll(newtMonth, year); // 3. Send the NEW month to the API
+                                    }}
                                     options={monthOptions}
                                     textSize="text-sm"
                                 />
                                 <CustomSelect
-                                    value={addNumberLines}
-                                    onChange={val => setAddNumberLines(Number(val))}
+                                    value={year}
+                                    onChange={val => {
+                                        const newYear = Number(val);
+                                        setYear(newYear);
+                                        findAll(month, newYear);
+                                    }}
                                     options={yearOptions}
                                     textSize="text-sm"
                                 />
                             </div>
 
-                            <div className="lg:col-span-4 flex items-end justify-end gap-2">
+                            <div className="lg:col-span-4 flex items-end justify-center lg:justify-end gap-2">
                                 <div className="w-40">
                                     <CustomInput value={addNumberLines} onChange={val => setAddNumberLines(Number(val))} type="number" />
                                 </div>
@@ -291,16 +330,22 @@ export default function Expenses() {
                     </div>
 
                     <div className="container mx-auto sm:px-16">
-                        <div className="grid grid-cols-1 gap-x-8 gap-y-8 px-4 py-11 sm:px-6 lg:grid-cols-6 lg:px-8">
-                            <div className="lg:col-span-5">
+                        <div className="grid grid-cols-1 gap-x-8 gap-y-4 px-4 py-11 sm:px-6 lg:grid-cols-6 lg:px-8">
+                            <div className="lg:col-span-6">
                                 <header className="mb-8">
-                                    <h2 className="lg:text-3xl text-xl font-extrabold text-slate-100">Financial Worksheet Incomes</h2>
+                                    <h2 className="lg:text-3xl md:text-2xl text-xl font-extrabold text-slate-100">
+                                        Financial Worksheet Incomes
+                                    </h2>
                                     <p className="text-slate-400">Directly edit rows and press enter to save data</p>
                                 </header>
                             </div>
 
-                            <div className="lg:col-span-1 flex lg:justify-end self-end">
-                                <CustomButton>testes</CustomButton>
+                            <div className="lg:col-span-6 flex items-end justify-center lg:justify-end gap-2">
+                                <div className="w-40">
+                                    <CustomInput value={addNumberLines} onChange={val => setAddNumberLines(Number(val))} type="number" />
+                                </div>
+
+                                <CustomButton onClick={() => handleAddLines(addNumberLines)}>Adicionar linhas</CustomButton>
                             </div>
 
                             <div className="lg:col-span-6 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">

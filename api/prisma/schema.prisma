@@ -19,14 +19,23 @@ model User {
     email    String    @unique
     password String
     name     String?
-    expenses expense[]
+    transactions Transaction[]
 }
 
-model expense {
-    id          Int      @id @default(autoincrement())
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+model Transaction {
+    id          Int             @id @default(autoincrement())
     userId      Int
-    user        User     @relation(fields: [userId], references: [id])
+    user        User            @relation(fields: [userId], references: [id])
     description String
-    date        DateTime
-    amount       Float
+    month       String
+    year        Int
+    amount      Float
+    type        TransactionType
+    
+    @@map("transactions")
 }

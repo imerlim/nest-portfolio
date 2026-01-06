@@ -7,6 +7,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
@@ -24,9 +25,10 @@ export class ExpensesController {
   }
 
   @Get()
-  async findAll(@Request() req) {
-    const userId = req.user.id; // 👈 Get only the expenses for the logged-in user
-    return this.expensesService.findAll(userId);
+  async findAll(@Query() query: any, @Request() req) {
+    const userId = req.user.id;
+    // This passes the whole query object (month, year, etc.) to the service
+    return this.expensesService.findAll(userId, query);
   }
 
   @Get(':id')
