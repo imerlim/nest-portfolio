@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
-export class ExpensesService {
+export class TransactionsService {
   constructor(private prisma: PrismaService) {}
   async create(data: any, userId: number) {
     return this.prisma.transaction.create({

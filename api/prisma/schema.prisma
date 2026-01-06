@@ -35,7 +35,7 @@ model Transaction {
     month       String
     year        Int
     amount      Float
-    type        TransactionType
+    type        TransactionType @default(EXPENSE)
     
     @@map("transactions")
 }

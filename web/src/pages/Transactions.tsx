@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import api from '../services/api.ts';
-import Table from '../components/Table';
+import Table from '../components/Table.tsx';
 import CustomInput from '../components/CustomInput.tsx';
 import CustomButton from '../components/CustomButton.tsx';
 import CustomSelect, { type SelectOption } from '../components/CustomSelect.tsx';
@@ -57,7 +57,7 @@ export default function Expenses() {
         try {
             setLoading(true);
             // 2. Fixed: Use params to filter by month/year in the backend
-            const response = await api.get('/expenses', { params: { month: selectedMonth || month, year: selectedYear || year } });
+            const response = await api.get('/transactions', { params: { month: selectedMonth || month, year: selectedYear || year } });
 
             const data = Array.isArray(response.data) ? response.data : [];
 
@@ -142,9 +142,9 @@ export default function Expenses() {
 
         try {
             if (item.id) {
-                await api.patch(`/expenses/${item.id}`, item);
+                await api.patch(`/transactions/${item.id}`, item);
             } else {
-                const response = await api.post('/expenses', item);
+                const response = await api.post('/transactions', item);
                 const savedItem = response.data;
 
                 // ATUALIZAÇÃO SUTIL:
@@ -179,7 +179,7 @@ export default function Expenses() {
 
         try {
             // 3. Chamada ao Backend
-            await api.delete(`/expenses/${item.id}`);
+            await api.delete(`/transactions/${item.id}`);
 
             // 4. Atualiza o estado: limpa os dados mantendo a linha na planilha
             setExpenses(prev => prev.map(exp => (exp.id === item.id ? { description: '', amount: 0 } : exp)));

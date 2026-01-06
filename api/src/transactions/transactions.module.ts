@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt'; // 👈 Add this import
-import { ExpensesService } from './expenses.service';
-import { ExpensesController } from './expenses.controller';
+import { TransactionsService } from './transactions.service';
+import { TransactionsController } from './transactions.controller';
 
 @Module({
   imports: [
@@ -11,7 +11,7 @@ import { ExpensesController } from './expenses.controller';
       signOptions: { expiresIn: '7d' },
     }),
   ],
-  controllers: [ExpensesController],
-  providers: [ExpensesService],
+  controllers: [TransactionsController],
+  providers: [TransactionsService],
 })
-export class ExpensesModule {}
+export class TransactionsModule {}
