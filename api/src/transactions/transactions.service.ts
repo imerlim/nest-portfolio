@@ -5,6 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 export class TransactionsService {
   constructor(private prisma: PrismaService) {}
   async create(data: any, userId: number) {
+    console.log(data);
+    return;
     return this.prisma.transaction.create({
       data: {
         description: data.description,

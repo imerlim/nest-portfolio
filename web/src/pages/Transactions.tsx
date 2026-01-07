@@ -5,18 +5,20 @@ import CustomInput from '../components/CustomInput.tsx';
 import CustomButton from '../components/CustomButton.tsx';
 import CustomSelect, { type SelectOption } from '../components/CustomSelect.tsx';
 
-export interface Expense {
-    id?: number;
+export interface Transaction {
+    id?: number | string;
     description: string;
     amount: number;
-    category?: string;
-    createdAt?: string;
+    type?: 'EXPENSE' | 'INCOME'; // O campo novo e importante!
+    month?: string;
+    year?: number;
 }
 
-export default function Expenses() {
-    const [expenses, setExpenses] = useState<Expense[]>([]);
-    const [month, setMonth] = useState<string>();
-    const [year, setYear] = useState<number>();
+export default function Transactions() {
+    const [expenses, setExpenses] = useState<Transaction[]>([]);
+    const [incomes, setIncomes] = useState<Transaction[]>([]);
+    const [month, setMonth] = useState<string>('January');
+    const [year, setYear] = useState<number>(new Date().getFullYear());
     const [addNumberLines, setAddNumberLines] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const originalValue = useRef<number | string>(0);
@@ -61,30 +63,31 @@ export default function Expenses() {
 
             const data = Array.isArray(response.data) ? response.data : [];
 
-            const filledData = [...data];
-            while (filledData.length < 50) {
-                // 3. Fixed: Added month/year to blank lines to maintain consistency
-                filledData.push({
-                    description: '',
-                    amount: 0,
-                    month: selectedMonth || month,
-                    year: selectedYear || year,
-                });
-            }
+            // 1. Separar os dados reais vindos da API por tipo
+            const realExpenses = data.filter(item => item.type === 'EXPENSE');
+            const realIncomes = data.filter(item => item.type === 'INCOME');
 
-            setExpenses(filledData);
-        } catch (error) {
-            console.error('Error fetching:', error);
-            setExpenses(
-                Array(50)
-                    .fill(null)
-                    .map(() => ({
+            // Função auxiliar para preencher até 50 linhas
+            const fillToFifty = (currentArray: Transaction[], type: 'EXPENSE' | 'INCOME') => {
+                const filledData: Transaction[] = [...currentArray];
+
+                while (filledData.length < 50) {
+                    filledData.push({
                         description: '',
                         amount: 0,
+                        type: type, // Mantém o tipo correto na linha vazia
                         month: selectedMonth || month,
                         year: selectedYear || year,
-                    }))
-            );
+                    });
+                }
+                return filledData;
+            };
+
+            // 2. Aplicar o preenchimento para cada categoria
+            setExpenses(fillToFifty(realExpenses, 'EXPENSE'));
+            setIncomes(fillToFifty(realIncomes, 'INCOME'));
+        } catch (error) {
+            console.error('Error fetching:', error);
         } finally {
             setLoading(false);
         }
@@ -104,8 +107,8 @@ export default function Expenses() {
     }, []);
 
     const handleAddLines = (qtd: number) => {
-        // 1. Explicitly type the array as Expense[] to solve image_aa3902.png
-        const blankLines: Expense[] = [];
+        // 1. Explicitly type the array as Transaction[] to solve image_aa3902.png
+        const blankLines: Transaction[] = [];
 
         for (let i = 0; i < qtd; i++) {
             blankLines.push({
@@ -123,8 +126,8 @@ export default function Expenses() {
     };
 
     // 3. Handle changes in the "Grid"
-    const handleCellChange = (index: number, field: string, value: any) => {
-        // Use 'expenses' instead of 'items' to match your actual state variable!
+    const handleCellChange = (index: number, field: string, value: any, type: string) => {
+        console.log(index, field, value, type);
         const newData = [...expenses];
         newData[index] = { ...newData[index], [field]: value };
         setExpenses(newData);
@@ -133,7 +136,6 @@ export default function Expenses() {
     // 4. Save logic (Triggers when user clicks outside the input)
     const handleSave = async (index: number, field: string) => {
         const item = expenses[index];
-        console.log(item);
         if (field == 'amount') {
             if (item.amount === originalValue.current) return;
         } else {
@@ -167,7 +169,7 @@ export default function Expenses() {
         }
     };
 
-    const handleDelete = async (item: Expense) => {
+    const handleDelete = async (item: Transaction) => {
         // 2. Se o item não tem ID, ele só existe na tela, basta limpar localmente
         if (!item.id) {
             const index = expenses.findIndex(e => e === item);
@@ -192,12 +194,12 @@ export default function Expenses() {
         {
             label: 'Description',
             key: 'description',
-            render: (item: Expense, index: number) => (
+            render: (item: Transaction, index: number) => (
                 <CustomInput
                     id={`description-${index}`}
                     value={item.description}
                     onFocus={() => handleFocus(item.description)}
-                    onChange={val => handleCellChange(index, 'description', val.toString())}
+                    onChange={val => handleCellChange(index, 'description', val.toString(), item.type!)}
                     onBlur={() => handleSave(index, 'description')}
                     onKeyDown={e => e.key === 'Enter' && handleSave(index, 'description')}
                     textSize="text-sm"
@@ -208,7 +210,7 @@ export default function Expenses() {
         {
             label: 'Value',
             key: 'amount',
-            render: (item: Expense, index: number) => (
+            render: (item: Transaction, index: number) => (
                 <CustomInput
                     id={`amount-${index}`}
                     value={item.amount} // Ensure 'item' is defined in your render function
@@ -367,12 +369,12 @@ export default function Expenses() {
                             <div className="lg:col-span-6 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
                                 <Table
                                     headers={tableHeaders}
-                                    items={expenses}
+                                    items={incomes}
                                     loading={loading}
                                     showSearch={true}
                                     showActions={true}
                                     actionType="delete"
-                                    onAction={item => console.log('Apagar:', item.id)}
+                                    onAction={item => handleDelete(item)}
                                 />
                             </div>
                         </div>
