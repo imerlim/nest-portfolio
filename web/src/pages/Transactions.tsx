@@ -215,7 +215,7 @@ export default function Transactions() {
                     id={`amount-${index}`}
                     value={item.amount} // Ensure 'item' is defined in your render function
                     onFocus={() => handleFocus(item.amount)}
-                    onChange={val => handleCellChange(index, 'amount', val)}
+                    onChange={val => handleCellChange(index, 'amount', val, item.type!)}
                     onBlur={() => handleSave(index, 'amount')}
                     onKeyDown={e => e.key === 'Enter' && handleSave(index, 'amount')}
                     formatCurrency={true}
