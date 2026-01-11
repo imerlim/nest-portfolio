@@ -140,7 +140,7 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>((props, ref) 
     return (
         <div className={`w-full ${className}`}>
             {label && (
-                <label htmlFor={id} className={`block mb-1 font-medium ${textSize}`}>
+                <label htmlFor={id} className="block mb-1.5 text-sm font-semibold text-slate-900 dark:text-white">
                     {label}
                 </label>
             )}
@@ -154,7 +154,7 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>((props, ref) 
                             ${
                                 error
                                     ? 'border-red-500 ring-1 ring-red-500'
-                                    : 'border-slate-300 focus-within:ring-1 focus-within:ring-blue-500'
+                                    : 'border-slate-300 focus-within:ring-1 focus-within:ring-sky-500'
                             }
                         `}
                     >
@@ -176,7 +176,7 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>((props, ref) 
                             onFocus={onFocus}
                             onKeyDown={onKeyDown}
                             className={`
-                                w-full p-2 bg-transparent outline-none
+                                w-full p-2.5 bg-transparent outline-none
                                 ${textSize}
                                 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
                                 ${inputClassName}
@@ -200,7 +200,7 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>((props, ref) 
                             </button>
                         )}
                         {showSearch && (
-                            <button onClick={onSearch} className={`bg-blue-600 text-white rounded ${buttonPadding}`}>
+                            <button onClick={onSearch} className={`bg-sky-600 text-white rounded ${buttonPadding}`}>
                                 <Search size={iconSize} />
                             </button>
                         )}

@@ -3,7 +3,7 @@ import api from '../services/api.ts';
 import Table from '../components/Table.tsx';
 import CustomInput from '../components/CustomInput.tsx';
 import CustomButton from '../components/CustomButton.tsx';
-import CustomSelect, { type SelectOption } from '../components/CustomSelect.tsx';
+import CustomDatePicker from '../components/CustomDatePicker.tsx';
 
 export interface Transaction {
     id?: number | string;
@@ -15,6 +15,7 @@ export interface Transaction {
 }
 
 export default function Transactions() {
+    const [transactionDate, setTransactionDate] = useState<Date | null>(new Date());
     const [expenses, setExpenses] = useState<Transaction[]>([]);
     const [incomes, setIncomes] = useState<Transaction[]>([]);
     const [month, setMonth] = useState<string>('January');
@@ -22,28 +23,6 @@ export default function Transactions() {
     const [addNumberLines, setAddNumberLines] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const originalValue = useRef<number | string>(0);
-    const monthOptions: SelectOption[] = [
-        { label: 'January', value: 'January' },
-        { label: 'February', value: 'February' },
-        { label: 'March', value: 'March' },
-        { label: 'April', value: 'April' },
-        { label: 'May', value: 'May' },
-        { label: 'June', value: 'June' },
-        { label: 'July', value: 'July' },
-        { label: 'August', value: 'August' },
-        { label: 'September', value: 'September' },
-        { label: 'October', value: 'October' },
-        { label: 'November', value: 'November' },
-        { label: 'December', value: 'December' },
-    ];
-    const yearOptions: SelectOption[] = useMemo(() => {
-        const currentYear = new Date().getFullYear();
-        // Gera uma lista de 10 anos (5 atrás, ano atual, 4 frente)
-        return Array.from({ length: 35 }, (_, i) => {
-            const year = currentYear - 10 + i;
-            return { label: String(year), value: year };
-        });
-    }, []);
 
     const handleFocus = (val: number | string) => {
         originalValue.current = val;
@@ -292,7 +271,6 @@ export default function Transactions() {
                                     <h2 className="lg:text-3xl md:text-2xl text-xl font-extrabold text-slate-100">
                                         Financial Worksheet Expenses
                                     </h2>
-                                    <p className="text-slate-400">Directly edit rows and press enter to save data</p>
                                 </header>
                                 <header className="text-center">
                                     <h2 className="lg:text-3xl md:text-2xl text-xl font-extrabold text-slate-100">
@@ -302,30 +280,21 @@ export default function Transactions() {
                                 </header>
                             </div>
 
-                            <div className="lg:col-span-2 flex lg:justify-end self-end gap-x-2">
-                                <CustomSelect
-                                    value={month}
-                                    onChange={val => {
-                                        const newtMonth = String(val); // 1. Capture the new value
-                                        setMonth(newtMonth); // 2. Update state for the UI
-                                        findAll(newtMonth, year); // 3. Send the NEW month to the API
+                            <div className="lg:col-span-1">
+                                <CustomDatePicker
+                                    id="transaction-date"
+                                    label="Transaction Date"
+                                    selected={transactionDate}
+                                    onChange={date => {
+                                        console.log('Variável date:', date); // Mostra o objeto Date completo
+                                        console.log('Tipo da variável:', typeof date); // Geralmente 'object'
+                                        setTransactionDate(date);
                                     }}
-                                    options={monthOptions}
-                                    textSize="text-sm"
-                                />
-                                <CustomSelect
-                                    value={year}
-                                    onChange={val => {
-                                        const newYear = Number(val);
-                                        setYear(newYear);
-                                        findAll(month, newYear);
-                                    }}
-                                    options={yearOptions}
-                                    textSize="text-sm"
+                                    description="When did this transaction occur?"
                                 />
                             </div>
 
-                            <div className="lg:col-span-4 flex items-end justify-center lg:justify-end gap-2">
+                            <div className="lg:col-span-5 flex items-end lg:justify-end gap-2 mb-9">
                                 <div className="w-40">
                                     <CustomInput value={addNumberLines} onChange={val => setAddNumberLines(Number(val))} type="number" />
                                 </div>
@@ -354,7 +323,6 @@ export default function Transactions() {
                                     <h2 className="lg:text-3xl md:text-2xl text-xl font-extrabold text-slate-100">
                                         Financial Worksheet Incomes
                                     </h2>
-                                    <p className="text-slate-400">Directly edit rows and press enter to save data</p>
                                 </header>
                             </div>
 
