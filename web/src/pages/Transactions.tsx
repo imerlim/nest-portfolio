@@ -16,29 +16,42 @@ export interface Transaction {
 
 export default function Transactions() {
     const [transactionDate, setTransactionDate] = useState<Date | null>(new Date());
-    const [expenses, setExpenses] = useState<Transaction[]>([]);
-    const [incomes, setIncomes] = useState<Transaction[]>([]);
+    const [itemsexpenses, setItemsExpenses] = useState<Transaction[]>([]);
+    const [itemsIncomes, setItemsIncomes] = useState<Transaction[]>([]);
     const [month, setMonth] = useState<string>('January');
     const [year, setYear] = useState<number>(new Date().getFullYear());
-    const [addNumberLines, setAddNumberLines] = useState<number>(0);
+    const [addNumberLinesExpense, setAddNumberLinesExpense] = useState<number>(0);
+    const [addNumberLinesIncome, setAddNumberLinesIncome] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const originalValue = useRef<number | string>(0);
+
+    const formattedDateLabel = transactionDate
+        ? transactionDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        : 'Select a date';
 
     const handleFocus = (val: number | string) => {
         originalValue.current = val;
     };
 
     // 1. Calculate Total Balance automatically
+    const totalIncome = useMemo(() => {
+        return itemsIncomes.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    }, [itemsIncomes]);
+
+    const totalExpense = useMemo(() => {
+        return itemsexpenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    }, [itemsexpenses]);
+
     const totalBalance = useMemo(() => {
-        return expenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-    }, [expenses]);
+        return totalIncome - totalExpense;
+    }, [totalIncome, totalExpense]);
 
     // 2. Fetch and Fill logic
     const findAll = async (selectedMonth?: string, selectedYear?: number) => {
         try {
             setLoading(true);
             // 2. Fixed: Use params to filter by month/year in the backend
-            const response = await api.get('/transactions', { params: { month: selectedMonth || month, year: selectedYear || year } });
+            const response = await api.get('/transactions', { params: { month: selectedMonth, year: selectedYear } });
 
             const data = Array.isArray(response.data) ? response.data : [];
 
@@ -55,16 +68,16 @@ export default function Transactions() {
                         description: '',
                         amount: 0,
                         type: type, // Mantém o tipo correto na linha vazia
-                        month: selectedMonth || month,
-                        year: selectedYear || year,
+                        month: selectedMonth,
+                        year: selectedYear,
                     });
                 }
                 return filledData;
             };
 
             // 2. Aplicar o preenchimento para cada categoria
-            setExpenses(fillToFifty(realExpenses, 'EXPENSE'));
-            setIncomes(fillToFifty(realIncomes, 'INCOME'));
+            setItemsExpenses(fillToFifty(realExpenses, 'EXPENSE'));
+            setItemsIncomes(fillToFifty(realIncomes, 'INCOME'));
         } catch (error) {
             console.error('Error fetching:', error);
         } finally {
@@ -73,19 +86,21 @@ export default function Transactions() {
     };
 
     useEffect(() => {
-        const hoje = new Date();
-        const mesAtual = hoje.toLocaleString('en-US', { month: 'long' });
-        const anoAtual = hoje.getFullYear();
+        if (transactionDate) {
+            // Extrai o mês por extenso e o ano do objeto Date selecionado
+            const selectedMonth = transactionDate.toLocaleString('en-US', { month: 'long' });
+            const selectedYear = transactionDate.getFullYear();
 
-        // Set initial states
-        setMonth(mesAtual);
-        setYear(anoAtual);
+            // Atualiza os estados de controle
+            setMonth(selectedMonth);
+            setYear(selectedYear);
 
-        // 4. Fixed: Removed 'this.' and called function with current values
-        findAll(mesAtual, anoAtual);
-    }, []);
+            // Chama a API com os novos valores
+            findAll(selectedMonth, selectedYear);
+        }
+    }, [transactionDate]);
 
-    const handleAddLines = (qtd: number) => {
+    const handleAddLines = (qtd: number, type: 'EXPENSE' | 'INCOME') => {
         // 1. Explicitly type the array as Transaction[] to solve image_aa3902.png
         const blankLines: Transaction[] = [];
 
@@ -93,30 +108,49 @@ export default function Transactions() {
             blankLines.push({
                 description: '',
                 amount: 0,
-                // Add other required fields from your Expense interface here
+                type: type,
+                month: month,
+                year: year,
             });
         }
 
-        // 2. Concatenate correctly using the spread operator
-        setExpenses(prev => [...prev, ...blankLines]);
+        if (type == 'EXPENSE') {
+            setItemsExpenses(prev => [...prev, ...blankLines]);
 
-        // 3. Reset UI state
-        setAddNumberLines(1);
+            setAddNumberLinesExpense(1);
+        }
+        if (type == 'INCOME') {
+            setItemsIncomes(prev => [...prev, ...blankLines]);
+
+            setAddNumberLinesIncome(1);
+        }
     };
 
     // 3. Handle changes in the "Grid"
     const handleCellChange = (index: number, field: string, value: any, type: string) => {
-        console.log(index, field, value, type);
-        const newData = [...expenses];
-        newData[index] = { ...newData[index], [field]: value };
-        setExpenses(newData);
+        if (type == 'EXPENSE') {
+            const newData = [...itemsexpenses];
+            newData[index] = { ...newData[index], [field]: value };
+            setItemsExpenses(newData);
+        }
+        if (type == 'INCOME') {
+            const newData = [...itemsIncomes];
+            newData[index] = { ...newData[index], [field]: value };
+            setItemsIncomes(newData);
+        }
     };
 
     // 4. Save logic (Triggers when user clicks outside the input)
-    const handleSave = async (index: number, field: string) => {
-        const item = expenses[index];
-        if (field == 'amount') {
-            if (item.amount === originalValue.current) return;
+    const handleSave = async (index: number, field: string, type: 'EXPENSE' | 'INCOME') => {
+        const currentList = type === 'EXPENSE' ? itemsexpenses : itemsIncomes;
+        const setTarget = type === 'EXPENSE' ? setItemsExpenses : setItemsIncomes;
+        const item = currentList[index];
+
+        // Se por algum motivo o item perder o type, tentamos recuperar do parâmetro da função
+        if (!item.type) item.type = type;
+
+        if (field === 'amount') {
+            if (Number(item.amount) === Number(originalValue.current)) return;
         } else {
             if (item.description === originalValue.current) return;
         }
@@ -125,47 +159,72 @@ export default function Transactions() {
             if (item.id) {
                 await api.patch(`/transactions/${item.id}`, item);
             } else {
+                // Só salva se houver conteúdo
+                if (!item.description && !item.amount) return;
+
                 const response = await api.post('/transactions', item);
                 const savedItem = response.data;
 
-                // ATUALIZAÇÃO SUTIL:
-                setExpenses(prev => {
+                setTarget(prev => {
                     const newArr = [...prev];
-                    newArr[index] = { ...newArr[index], id: savedItem.id }; // Mantém o que o usuário digitou, só injeta o ID
+                    newArr[index] = { ...newArr[index], id: savedItem.id };
                     return newArr;
                 });
             }
-            originalValue.current = item.amount;
+            originalValue.current = field === 'amount' ? item.amount : item.description;
         } catch (error) {
             console.error('Save error:', error);
         } finally {
-            setTimeout(() => {
-                if (field === 'description') {
-                    const nextInput = document.getElementById(`amount-${index}`);
-                    nextInput?.focus();
-                }
-            }, 1);
+            if (field === 'description') {
+                // O segredo está em garantir que o ID aqui bata com o ID do tableHeaders
+                setTimeout(() => {
+                    const targetId = `amount-${type}-${index}`;
+                    const nextInput = document.getElementById(targetId);
+                    if (nextInput) {
+                        nextInput.focus();
+                    } else {
+                        console.warn(`Não encontrei o input com ID: ${targetId}`);
+                    }
+                }, 1);
+            }
         }
     };
 
     const handleDelete = async (item: Transaction) => {
-        // 2. Se o item não tem ID, ele só existe na tela, basta limpar localmente
+        // Objeto padrão para resetar a linha sem perder a inteligência dela
+        const resetedItem = {
+            description: '',
+            amount: 0,
+            type: item.type,
+            month: item.month,
+            year: item.year,
+        };
+
         if (!item.id) {
-            const index = expenses.findIndex(e => e === item);
-            const updated = [...expenses];
-            updated[index] = { description: '', amount: 0 };
-            setExpenses(updated);
-            return;
+            if (item.type === 'EXPENSE') {
+                const index = itemsexpenses.findIndex(e => e === item);
+                const updated = [...itemsexpenses];
+                updated[index] = resetedItem; // Usa o objeto com type!
+                setItemsExpenses(updated);
+                return;
+            }
+            if (item.type === 'INCOME') {
+                const index = itemsIncomes.findIndex(e => e === item);
+                const updated = [...itemsIncomes];
+                updated[index] = resetedItem;
+                setItemsIncomes(updated);
+                return;
+            }
         }
 
         try {
-            // 3. Chamada ao Backend
             await api.delete(`/transactions/${item.id}`);
 
-            // 4. Atualiza o estado: limpa os dados mantendo a linha na planilha
-            setExpenses(prev => prev.map(exp => (exp.id === item.id ? { description: '', amount: 0 } : exp)));
+            if (item.type === 'EXPENSE') setItemsExpenses(prev => prev.map(exp => (exp.id === item.id ? resetedItem : exp)));
+
+            if (item.type === 'INCOME') setItemsIncomes(prev => prev.map(inc => (inc.id === item.id ? resetedItem : inc)));
         } catch (error) {
-            console.error('Error deleting expense:', error);
+            console.error('Error deleting:', error);
         }
     };
 
@@ -175,12 +234,12 @@ export default function Transactions() {
             key: 'description',
             render: (item: Transaction, index: number) => (
                 <CustomInput
-                    id={`description-${index}`}
+                    id={`description-${item.type}-${index}`} // ID único: description-INCOME-0
                     value={item.description}
                     onFocus={() => handleFocus(item.description)}
                     onChange={val => handleCellChange(index, 'description', val.toString(), item.type!)}
-                    onBlur={() => handleSave(index, 'description')}
-                    onKeyDown={e => e.key === 'Enter' && handleSave(index, 'description')}
+                    onBlur={() => handleSave(index, 'description', item.type!)}
+                    onKeyDown={e => e.key === 'Enter' && handleSave(index, 'description', item.type!)}
                     textSize="text-sm"
                     placeholder="Description..."
                 />
@@ -191,12 +250,12 @@ export default function Transactions() {
             key: 'amount',
             render: (item: Transaction, index: number) => (
                 <CustomInput
-                    id={`amount-${index}`}
+                    id={`amount-${item.type}-${index}`} // ID único: description-INCOME-0
                     value={item.amount} // Ensure 'item' is defined in your render function
                     onFocus={() => handleFocus(item.amount)}
                     onChange={val => handleCellChange(index, 'amount', val, item.type!)}
-                    onBlur={() => handleSave(index, 'amount')}
-                    onKeyDown={e => e.key === 'Enter' && handleSave(index, 'amount')}
+                    onBlur={() => handleSave(index, 'amount', item.type!)}
+                    onKeyDown={e => e.key === 'Enter' && handleSave(index, 'amount', item.type!)}
                     formatCurrency={true}
                     prepend="$"
                 />
@@ -233,14 +292,14 @@ export default function Transactions() {
                         <div className="text-center md:text-right">
                             <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">Total Income</p>
                             <p className="text-lg md:text-xl font-mono text-emerald-400">
-                                $ {totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                $ {totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </p>
                         </div>
 
                         <div className="text-center md:text-right border-l border-slate-700 lg:px-6 px-5">
                             <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">Total Expense</p>
                             <p className="text-lg md:text-xl font-mono text-red-400">
-                                $ {totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                $ {totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </p>
                         </div>
 
@@ -273,10 +332,7 @@ export default function Transactions() {
                                     </h2>
                                 </header>
                                 <header className="text-center">
-                                    <h2 className="lg:text-3xl md:text-2xl text-xl font-extrabold text-slate-100">
-                                        {' '}
-                                        {month}, {year}{' '}
-                                    </h2>
+                                    <h2 className="lg:text-3xl md:text-2xl text-xl font-extrabold text-slate-100">{formattedDateLabel}</h2>
                                 </header>
                             </div>
 
@@ -296,16 +352,20 @@ export default function Transactions() {
 
                             <div className="lg:col-span-5 flex items-end lg:justify-end gap-2 mb-9">
                                 <div className="w-40">
-                                    <CustomInput value={addNumberLines} onChange={val => setAddNumberLines(Number(val))} type="number" />
+                                    <CustomInput
+                                        value={addNumberLinesExpense}
+                                        onChange={val => setAddNumberLinesExpense(Number(val))}
+                                        type="number"
+                                    />
                                 </div>
 
-                                <CustomButton onClick={() => handleAddLines(addNumberLines)}>Adicionar linhas</CustomButton>
+                                <CustomButton onClick={() => handleAddLines(addNumberLinesExpense, 'EXPENSE')}>Add lines</CustomButton>
                             </div>
 
                             <div className="lg:col-span-6 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
                                 <Table
                                     headers={tableHeaders}
-                                    items={expenses}
+                                    items={itemsexpenses}
                                     loading={loading}
                                     showSearch={true}
                                     showActions={true}
@@ -328,16 +388,20 @@ export default function Transactions() {
 
                             <div className="lg:col-span-6 flex items-end justify-center lg:justify-end gap-2">
                                 <div className="w-40">
-                                    <CustomInput value={addNumberLines} onChange={val => setAddNumberLines(Number(val))} type="number" />
+                                    <CustomInput
+                                        value={addNumberLinesIncome}
+                                        onChange={val => setAddNumberLinesIncome(Number(val))}
+                                        type="number"
+                                    />
                                 </div>
 
-                                <CustomButton onClick={() => handleAddLines(addNumberLines)}>Adicionar linhas</CustomButton>
+                                <CustomButton onClick={() => handleAddLines(addNumberLinesIncome, 'INCOME')}>Add lines</CustomButton>
                             </div>
 
                             <div className="lg:col-span-6 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
                                 <Table
                                     headers={tableHeaders}
-                                    items={incomes}
+                                    items={itemsIncomes}
                                     loading={loading}
                                     showSearch={true}
                                     showActions={true}

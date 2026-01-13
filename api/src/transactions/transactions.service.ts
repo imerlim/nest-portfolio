@@ -5,8 +5,6 @@ import { PrismaService } from '../prisma/prisma.service';
 export class TransactionsService {
   constructor(private prisma: PrismaService) {}
   async create(data: any, userId: number) {
-    console.log(data);
-    return;
     return this.prisma.transaction.create({
       data: {
         description: data.description,
@@ -14,6 +12,7 @@ export class TransactionsService {
         userId: userId, // Link to the logged-in user
         month: data.month,
         year: data.year,
+        type: data.type,
       },
     });
   }
